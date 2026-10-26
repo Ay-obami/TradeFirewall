@@ -2,7 +2,7 @@
 
 **Competition:** [dreamDEX Perps Builder Bounty](https://dorahacks.io/hackathon/dreamdex-perps-bounty/detail)  
 **Deadline:** November 1, 2026, 23:59 UTC (November 2, 00:59 WAT)  
-**Target:** MVP track; a distinct Feedback submission may use the same bounty's Feedback track.
+**Target:** both Feedback and MVP tracks (subject to organizer whitelist approval). Feedback and MVP evidence should be labeled separately.
 
 ## Eligibility and publication
 
@@ -38,8 +38,8 @@
 
 ## Feedback submission, if entering both tracks
 
-- [ ] Keep a `feedback/` folder, one Markdown file per bug; each file includes a short title, `Severity: critical | major | normal`, `Area: API | SDK | docs | app | contracts`, reproducible steps, expected/actual, evidence, and environment.
+- [x] Keep a `feedback/` folder reserved for actual issue files. Copy [`feedback-report-template.md`](feedback-report-template.md) into it **only after an issue is reproduced**; include a short title, `Severity: critical | major | normal`, `Area: API | SDK | docs | app | contracts`, reproducible steps, expected/actual, evidence, and environment.
 - [ ] Exclude findings confirmed to duplicate another first report. Do not present offline hypothetical impact as an observed financial loss.
 - [ ] Submit a DoraHacks Feedback Build if that track needs its own entry; verify accepted status separately from the MVP submission.
 
-**Current verified state when drafted (October 26, 2026):** development and simulated tests are in progress. No evidence of funded Hideki wallet, live submitted perp order, published X thread, whitelisted email, or accepted DoraHacks Build has been provided for TradeFirewall. Update each checkbox only against actual artifacts.
+**Current verified state (October 26, 2026):** public repository and offline implementation exist. Local verification from the Ubuntu development laptop showed 74 Node and 14 Solidity tests passing. No evidence of a live submitted perp order, published X thread, whitelisted email, or accepted DoraHacks Build has been provided for TradeFirewall. Hideki gas must be rechecked before use. Maintain proof references in [`evidence-register.md`](evidence-register.md).

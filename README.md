@@ -14,7 +14,7 @@ TradeFirewall allows a trader to set binding limits on **AI trading agents and c
 
 The pure risk engine uses integer micro-USD arithmetic, not floating-point balances. The execution adapter uses expiring, single-use approvals. An experimental Solidity operator imposes additional market, price, quantity, deadline and pause restrictions, but its live operator authorization remains unverified.
 
-A read-only dreamDEX SDK boundary (`src/dreamdex/read-only.ts`) is implemented against an injectable client and tested with fixtures. It validates Hideki network and market metadata, including raw decimals and state freshness. **The actual SDK package has not been live-smoke-tested here; account risk readings and transaction submission still require wiring.**
+A read-only dreamDEX SDK boundary (`src/dreamdex/read-only.ts`) and a keyless SDK client bootstrap (`src/dreamdex-live/live-read.ts`) are implemented and tested using injected dependencies. The read-only lane validates the observed Hideki chain, market configuration, and sizing constraints; the order lane has guarded, offline-tested SDK request mapping. **The actual SDK package has not been live-smoke-tested against the network here. Verified account risk readings, signed order execution, and transaction receipts are still outstanding.**
 
 ## Run locally (Node.js 24 recommended)
 
@@ -32,7 +32,7 @@ Open `http://localhost:8080/web/` while the server runs. The demo never connects
 
 In a real deployment the operator/signer is held behind the gate, not by the trading agent. Off-chain checks can be bypassed if the agent retains another unrestricted credential. The Solidity operator prototype (`contracts/TradeFirewallGate.sol`) is a narrower on-chain safety backstop, **not** proof of live dreamDEX integration. See [on-chain limitations](docs/onchain/enforcement.md) and [architecture](docs/architecture.md).
 
-Target exchange: dreamDEX perps, Somnia Hideki testnet (chain ID `50383`). Actual SDK order submission, funding, deployed-operator authorization, and on-chain transactions are outstanding. Existing Solidity tests compiled but have not been executed in Foundry.
+Target exchange: dreamDEX perps, Somnia Hideki testnet (chain ID `50383`). Actual SDK order submission, funding, deployed-operator authorization, and on-chain transactions are outstanding. The Solidity gate's 14 Foundry tests passed on the Ubuntu development laptop on October 26, 2026 using Solidity 0.8.24 with IR optimization. Tests do **not** establish deployment or real exchange permission compatibility.
 
 ## Evidence and bounty preparation
 
@@ -41,7 +41,9 @@ Target exchange: dreamDEX perps, Somnia Hideki testnet (chain ID `50383`). Actua
 - `docs/issues.md`: independent workstreams and acceptance criteria
 - `docs/demo-script.md`: demonstration walkthrough
 - `docs/submission/dorahacks-checklist.md`: DoraHacks checklist
+- `docs/submission/evidence-register.md`: evidence capture and claim classification
 - `docs/submission/x-post-drafts.md`: draft posts (none published)
+- `feedback/`: actual reproducible bug reports only; see [the report template](docs/submission/feedback-report-template.md) and [feedback guidance](docs/submission/feedback-guidance.md)
 
 **Live order hashes:** pending testnet STT and SDK integration.
 

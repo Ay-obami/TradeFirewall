@@ -16,10 +16,14 @@
 - Only explicit `limit` orders map to the documented method. `market` is rejected until the SDK's market/IOC and slippage semantics are verified and separately reviewed. The current adapter doesn't support stop, reduce-only, FOK, post-only, delegation, or link-a-bot operator placement.
 - Every `(account, clientOrderId)` can be submitted **once per process**. A successful placement, SDK timeout, network error, or invalid SDK response reserves the ID and prevents a blind resend. This memory-only guard is **not sufficient** for multi-process or crash-safe operation; a durable submission journal keyed by wallet and order ID plus on-chain reconciliation is required before production deployment.
 - A syntactically valid transaction hash is **not** a mined receipt, confirmed fill, finality, or proof of P&L. Monitor the transaction receipt and protocol order state separately. Never report a trade as executed based solely on an SDK response.
+- `src/execution/receipt-evidence.ts` provides a separate **read-only** `verifyMinedTransactionEvidence(rpc, { chainId, account, transactionHash })` step. Pass a trustworthy chain-specific RPC reader that implements `getChainId()` and `getTransactionReceipt(hash)`; no signer is needed. It rejects wrong-chain, missing/reverted/unmined/malformed receipts, mismatched transaction hashes and senders. Its evidence includes the successful transaction's block and destination, but deliberately sets `perpsOrderConfirmed: false`.
+- To claim an **actual perps order**, separately validate the dreamDEX-specific order event/ID or authoritative exchange state, with an expected pool/account/order mapping. A successful chain transaction alone is insufficient, particularly when the transaction targets a router or operator registry.
 - SDK errors are deliberately summarized as `AMBIGUOUS_BROADCAST`; caller must reconcile on chain before any new transaction is attempted. Error messages must not contain account secrets.
 
 ## Testing and readiness
 
 Run `node tests/execution/sdk-execution.test.ts` for the mock-SDK suite. It covers exact field mapping, dry-run, chain/account binding, market-unit constraints, unsupported orders, duplicate suppression, ambiguous failure, and hash validation.
+
+Run `node --test tests/execution/receipt-evidence.test.ts` for receipt-evidence guard cases; it uses injected read-only RPC responses and does not fetch real chain data.
 
 This component's status is **mock-tested adapter**, not live network integration. Before a bounty MVP can truthfully claim live orders, the trusted facade must be wired to an official SDK instance, tested with paper funds on Hideki, and accompanied by transaction hashes and receipts. Do not commit private keys or live credentials to the repository.

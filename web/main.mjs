@@ -1,4 +1,5 @@
 import { evaluateIntent, defaultLimits } from './demo-engine.mjs';
+import { buildSimulationEvidence } from './evidence-export.mjs';
 
 const $ = id => document.getElementById(id);
 const form = $('intent-form');
@@ -98,11 +99,11 @@ document.querySelectorAll('.scenario').forEach(button => {
 
 $('export-button').addEventListener('click', () => {
   if (!ledger.length) return;
-  const content = JSON.stringify({ disclaimer: 'OFFLINE SIMULATION — not a transaction record', records: ledger }, null, 2);
+  const content = JSON.stringify(buildSimulationEvidence(ledger), null, 2);
   const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'tradefirewall-simulation-ledger.json';
+  a.download = 'tradefirewall-offline-policy-evidence.json';
   a.click();
   URL.revokeObjectURL(url);
 });
