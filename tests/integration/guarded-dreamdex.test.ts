@@ -16,7 +16,7 @@ const policy: RiskPolicy = { allowedMarkets:['BTC-PERP'], maxLeverageBps:50000,
   maxDailyLossUsd6:'1000000', maxSnapshotAgeMs:500 };
 const tx = '0x' + '45'.repeat(32);
 
-function setup(options:{ live?: boolean; wrongWallet?:boolean }={}) {
+function setup(options:{ live?: boolean; wrongWallet?:boolean; readiness?:boolean }={}) {
   let submitted=0;
   let snapshots=0;
   const sdk = {
@@ -26,6 +26,7 @@ function setup(options:{ live?: boolean; wrongWallet?:boolean }={}) {
     trader:{placePerpOrder:async()=>{submitted++;return {transactionHash:tx};}},
   };
   const workflow=createGuardedDreamdexWorkflow({sdk,liveEnabled:options.live??false,
+    ...(options.readiness ? {assertLiveReadiness:async()=>({chainId:50383,account,permissionVerified:true,riskProvenanceVerified:true})} : {}),
     readSnapshot:async()=>{snapshots++;return state;}, nowMs:()=>1100, policy,
     resolveRisk:async()=>({marketSymbol:'BTC-PERP',leverageBps:10000,slippageBps:0,
       lotSizeRaw:1n,quoteNotionalUsd6:(n:bigint)=>(n*1000n).toString(),
@@ -52,8 +53,17 @@ test('wrong SDK wallet fails before requesting any account-risk snapshot',async(
   assert.deepEqual(stats(),{submitted:0,snapshots:0});
 });
 
-test('live submission requires explicit enablement and rechecks one-use approval',async()=>{
+test('live enablement cannot bypass missing verified readiness evidence',async()=>{
   const {workflow,stats}=setup({live:true});
+  const prepared=await workflow.prepare(intent);
+  assert.equal(prepared.action,'approved');
+  if(prepared.action!=='approved') return;
+  await assert.rejects(workflow.executeLive(prepared.approvalId),/LIVE_READINESS_NOT_VERIFIED/);
+  assert.equal(stats().submitted,0);
+});
+
+test('mocked verified live readiness is checked before SDK submission and approval is one-use',async()=>{
+  const {workflow,stats}=setup({live:true,readiness:true});
   const prepared=await workflow.prepare(intent);
   assert.equal(prepared.action,'approved');
   if(prepared.action!=='approved') return;

@@ -6,6 +6,15 @@ export interface GuardedDreamdexWorkflowDependencies extends Omit<PolicyGuardDep
   sdk: DreamdexExecutionSdk;
   /** Explicit opt-in for an independently configured signer; false by default. */
   liveEnabled?: boolean;
+  /**
+   * Caller-owned independent live authority boundary. Must verify real account
+   * risk provenance AND perps operator permission immediately before signing.
+   * Never implement this with offline fixtures or advisory margin diagnostics.
+   */
+  assertLiveReadiness?: () => Promise<{
+    chainId:number; account:`0x${string}`;
+    permissionVerified:boolean; riskProvenanceVerified:boolean;
+  }>;
 }
 
 /**
@@ -40,6 +49,12 @@ export function createGuardedDreamdexWorkflow(deps:GuardedDreamdexWorkflowDepend
     },
     async executeLive(approvalId:string) {
       if(deps.liveEnabled!==true) throw new Error('LIVE_EXECUTION_DISABLED');
+      if(!deps.assertLiveReadiness) throw new Error('LIVE_READINESS_NOT_VERIFIED');
+      const proof=await deps.assertLiveReadiness();
+      if(proof?.chainId!==50383 || proof.account?.toLowerCase()!==deps.sdk.walletAddress.toLowerCase()
+        ||proof.permissionVerified!==true || proof.riskProvenanceVerified!==true) {
+        throw new Error('LIVE_READINESS_NOT_VERIFIED');
+      }
       return guarded.execute(approvalId);
     },
   });
