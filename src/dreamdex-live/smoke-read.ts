@@ -41,7 +41,14 @@ export async function runHidekiReadSmoke(deps: {
   const sdk = bootstrapHidekiReadClient(await (deps.loadSdk ?? loadInstalledSdk)()) as {
     client: {
       listPerpMarkets(): Promise<Array<{baseSymbol:string,poolAddress:string,marginBank:string}>>;
-      getPerpSystemConfig(marginBank:string): Promise<{collateral?:unknown}>;
+      getPerpSystemConfig(marginBank:string): Promise<{
+        marginBank?:unknown;
+        collateralToken?:unknown;
+        perpPoolFactory?:unknown;
+        liquidationEngine?:unknown;
+        insuranceFund?:unknown;
+        fullyWired?:unknown;
+      }>;
     };
   };
   if (typeof sdk.client.listPerpMarkets !== 'function' || typeof sdk.client.getPerpSystemConfig !== 'function') {
@@ -54,7 +61,12 @@ export async function runHidekiReadSmoke(deps: {
     throw new Error('INVALID_MARKET');
   }
   const config = await sdk.client.getPerpSystemConfig(first.marginBank);
-  if (!config || !ADDRESS.test(String(config.collateral ?? ''))) throw new Error('INVALID_SYSTEM_CONFIG');
+  if (!config || !ADDRESS.test(String(config.collateralToken ?? '')) ||
+      String(config.marginBank ?? '').toLowerCase() !== first.marginBank.toLowerCase() ||
+      !ADDRESS.test(String(config.perpPoolFactory ?? '')) ||
+      !ADDRESS.test(String(config.liquidationEngine ?? '')) ||
+      !ADDRESS.test(String(config.insuranceFund ?? '')) ||
+      config.fullyWired !== true) throw new Error('INVALID_SYSTEM_CONFIG');
   return {
     chainId,
     marketCount:markets.length,

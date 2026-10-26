@@ -12,7 +12,14 @@ test('smoke reads market and system config without passing a signer', async () =
       SomniaMarkets: class {
         client = {
           listPerpMarkets: async () => [MARKET],
-          getPerpSystemConfig: async (bank: string) => ({ collateral: '0xed7993A74dAe1e6656B704A424DcD8711aAf4F72', bank }),
+          getPerpSystemConfig: async (bank: string) => ({
+            marginBank:bank,
+            collateralToken:'0xed7993A74dAe1e6656B704A424DcD8711aAf4F72',
+            perpPoolFactory:'0x4444444444444444444444444444444444444444',
+            liquidationEngine:'0x5555555555555555555555555555555555555555',
+            insuranceFund:'0x6666666666666666666666666666666666666666',
+            fullyWired:true,
+          }),
         };
         constructor(opts: Record<string,unknown>) { signerSupplied = 'privateKey' in opts; }
       },
@@ -34,10 +41,24 @@ test('empty market list and failed configuration do not produce a successful smo
   const loadSdk = async () => ({SomniaMarkets:class {client={listPerpMarkets:async()=>[],getPerpSystemConfig:async()=>({})};},hidekiTestnet:{id:50383},SOMNIA_HIDEKI_TESTNET_ADDRESSES:{}});
   await assert.rejects(runHidekiReadSmoke({readChainId:async()=>50383,loadSdk}), /NO_MARKETS/);
   const broken = async () => ({
-    SomniaMarkets: class {client={listPerpMarkets:async()=>[MARKET],getPerpSystemConfig:async()=>({collateral:null})};},
+    SomniaMarkets: class {client={listPerpMarkets:async()=>[MARKET],getPerpSystemConfig:async()=>({collateralToken:null,fullyWired:false})};},
     hidekiTestnet:{id:50383},SOMNIA_HIDEKI_TESTNET_ADDRESSES:{},
   });
   await assert.rejects(runHidekiReadSmoke({readChainId:async()=>50383,loadSdk:broken}), /INVALID_SYSTEM_CONFIG/);
+});
+
+test('a different MarginBank in system config fails closed', async () => {
+  const loadSdk = async () => ({
+    SomniaMarkets: class {client={listPerpMarkets:async()=>[MARKET],getPerpSystemConfig:async()=>({
+      marginBank:'0x7777777777777777777777777777777777777777',
+      collateralToken:'0xed7993A74dAe1e6656B704A424DcD8711aAf4F72',
+      perpPoolFactory:'0x4444444444444444444444444444444444444444',
+      liquidationEngine:'0x5555555555555555555555555555555555555555',
+      insuranceFund:'0x6666666666666666666666666666666666666666',
+      fullyWired:true,
+    })};},hidekiTestnet:{id:50383},SOMNIA_HIDEKI_TESTNET_ADDRESSES:{},
+  });
+  await assert.rejects(runHidekiReadSmoke({readChainId:async()=>50383,loadSdk}), /INVALID_SYSTEM_CONFIG/);
 });
 
 test('RPC chain reader rejects malformed JSON-RPC payload instead of assuming configured Hideki', async () => {
