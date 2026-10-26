@@ -1,0 +1,14 @@
+{
+  "name": "tradefirewall",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/**/*.test.ts web/tests/*.test.mjs",
+    "check": "node --test tests/**/*.test.ts web/tests/*.test.mjs",
+    "simulate": "node src/simulator/run-offline.ts fixtures/adversarial-scenarios.json"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

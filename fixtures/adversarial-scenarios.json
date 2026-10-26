@@ -1,0 +1,50 @@
+[
+  {
+    "id": "runaway-agent-size",
+    "description": "Agent proposes double the maximum order notional; reference gate reduces it",
+    "steps": [{ "tick": 1, "intent": { "id": "runaway-1", "account": "0xDEMO_A", "market": "BTC-PERP", "requestedUsd": 2000, "slippageBps": 10 }, "snapshot": { "oracleAgeMs": 50, "dailyLossUsd": 0 } }],
+    "expected": [{ "action": "resize", "reason": "ORDER_NOTIONAL" }]
+  },
+  {
+    "id": "stale-oracle",
+    "description": "A stale oracle reading must never authorize a trade",
+    "steps": [{ "tick": 1, "intent": { "id": "oracle-1", "account": "0xDEMO_A", "market": "BTC-PERP", "requestedUsd": 100, "slippageBps": 10 }, "snapshot": { "oracleAgeMs": 10001, "dailyLossUsd": 0 } }],
+    "expected": [{ "action": "block", "reason": "STALE_ORACLE" }]
+  },
+  {
+    "id": "adverse-slippage",
+    "description": "Proposed slippage beyond the reference bound is rejected",
+    "steps": [{ "tick": 1, "intent": { "id": "slippage-1", "account": "0xDEMO_A", "market": "BTC-PERP", "requestedUsd": 100, "slippageBps": 81 }, "snapshot": { "oracleAgeMs": 50, "dailyLossUsd": 0 } }],
+    "expected": [{ "action": "block", "reason": "SLIPPAGE" }]
+  },
+  {
+    "id": "drawdown-breach",
+    "description": "Prior daily loss above the reference threshold blocks new risk",
+    "steps": [{ "tick": 1, "intent": { "id": "loss-1", "account": "0xDEMO_A", "market": "BTC-PERP", "requestedUsd": 100, "slippageBps": 10 }, "snapshot": { "oracleAgeMs": 50, "dailyLossUsd": 501 } }],
+    "expected": [{ "action": "block", "reason": "DAILY_LOSS" }]
+  },
+  {
+    "id": "intent-replay",
+    "description": "Exact trade intent cannot be submitted twice in one scenario",
+    "steps": [
+      { "tick": 1, "intent": { "id": "replay-1", "account": "0xDEMO_A", "market": "BTC-PERP", "requestedUsd": 100, "slippageBps": 10 }, "snapshot": { "oracleAgeMs": 50, "dailyLossUsd": 0 } },
+      { "tick": 2, "intent": { "id": "replay-1", "account": "0xDEMO_A", "market": "BTC-PERP", "requestedUsd": 100, "slippageBps": 10 }, "snapshot": { "oracleAgeMs": 50, "dailyLossUsd": 0 } }
+    ],
+    "expected": [{ "action": "allow", "reason": "POLICY_OK" }, { "action": "block", "reason": "DUPLICATE_INTENT" }]
+  },
+  {
+    "id": "conflicting-concurrent-bots",
+    "description": "Two simultaneously competing proposals for one account cannot both reserve it",
+    "steps": [
+      { "tick": 5, "intent": { "id": "bot-a-1", "account": "0xDEMO_A", "market": "BTC-PERP", "requestedUsd": 100, "slippageBps": 10 }, "snapshot": { "oracleAgeMs": 50, "dailyLossUsd": 0 } },
+      { "tick": 5, "intent": { "id": "bot-b-1", "account": "0xDEMO_A", "market": "BTC-PERP", "requestedUsd": 100, "slippageBps": 10 }, "snapshot": { "oracleAgeMs": 50, "dailyLossUsd": 0 } }
+    ],
+    "expected": [{ "action": "allow", "reason": "POLICY_OK" }, { "action": "block", "reason": "CONCURRENT_ACCOUNT_INTENT" }]
+  },
+  {
+    "id": "malicious-override",
+    "description": "Explicit attempt to override a policy limit is refused",
+    "steps": [{ "tick": 1, "intent": { "id": "override-1", "account": "0xDEMO_A", "market": "BTC-PERP", "requestedUsd": 100, "slippageBps": 10, "bypassRequested": true }, "snapshot": { "oracleAgeMs": 50, "dailyLossUsd": 0 } }],
+    "expected": [{ "action": "block", "reason": "UNAUTHORIZED_OVERRIDE" }]
+  }
+]

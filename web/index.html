@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b1014" />
+  <title>TradeFirewall — Autonomous trading, bounded risk</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="module" src="./main.mjs"></script>
+</head>
+<body>
+  <div class="site-shell">
+    <aside class="sidebar" aria-label="Project navigation">
+      <a class="brand" href="#overview" aria-label="TradeFirewall home"><span class="brand-mark">✳</span><span>trade<span class="brand-muted">firewall</span><small>RISK INFRASTRUCTURE</small></span></a>
+      <div class="nav-caption">WORKSPACE</div>
+      <nav class="nav-links">
+        <a class="active" href="#overview"><span>◫</span> Overview</a>
+        <a href="#playground"><span>◇</span> Policy playground</a>
+        <a href="#activity"><span>▤</span> Decision ledger</a>
+      </nav>
+      <div class="side-bottom">
+        <div class="environment"><span class="live-dot"></span><div><strong>Somnia Hideki</strong><small>Chain 50383 · Target</small></div></div>
+        <p>Local simulation. No real funds, signer, or network execution.</p>
+        <div class="build-tag">PRE-DEPLOYMENT · V0.1</div>
+      </div>
+    </aside>
+
+    <main id="overview" class="main-content">
+      <header class="topbar"><div class="breadcrumbs">Workspace <span>/</span> Firewall Overview</div><div class="top-right"><span class="outline-pill"><span class="amber-dot"></span> SIMULATION MODE</span><span class="avatar">AY</span></div></header>
+      <section class="hero">
+        <div class="eyebrow"><span class="dot"></span> EXECUTION CONTROL LAYER <span class="line"></span> DREAMDEX PERPS</div>
+        <div class="hero-copy"><div><h1>Trust the strategy.<br/><em>Verify the trade.</em></h1><p>An independent decision gate for AI agents and algorithmic trading bots. Every proposed trade meets your limits before it reaches execution.</p><a class="primary-btn" href="#playground">Try the policy gate <span>↗</span></a></div><div class="hero-motif" aria-hidden="true"><div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit o3"></div><div class="core-symbol">✳</div><span class="floating-tag t1">POLICY MATCH</span><span class="floating-tag t2">SIGNED INTENT</span></div></div>
+      </section>
+
+      <section class="metric-grid" aria-label="Simulation metrics">
+        <article class="metric"><div class="metric-name">TOTAL EVALUATED <span>↗</span></div><strong id="stat-total">00</strong><small>Local trade decisions</small></article>
+        <article class="metric"><div class="metric-name">ALLOWED <span class="green">●</span></div><strong id="stat-allow">00</strong><small>Within configured limits</small></article>
+        <article class="metric"><div class="metric-name">RESIZED <span class="yellow">●</span></div><strong id="stat-resize">00</strong><small>Orders adjusted safely</small></article>
+        <article class="metric"><div class="metric-name">BLOCKED <span class="red">●</span></div><strong id="stat-block">00</strong><small>Policy violations caught</small></article>
+      </section>
+
+      <section id="playground" class="section-heading"><div><div class="eyebrow subtle">INTERACTIVE SIMULATION</div><h2>The policy playground</h2><p>Choose a scenario or craft your own intent. The firewall evaluates it independently.</p></div><span class="mini-tag">NO ON-CHAIN EXECUTION</span></section>
+      <div class="workspace-grid">
+        <section class="panel form-panel" aria-labelledby="intent-heading">
+          <div class="panel-heading"><div><span class="panel-kicker">01 / AGENT INPUT</span><h3 id="intent-heading">Proposed trade</h3></div><span class="monogram">BOT-01</span></div>
+          <div class="scenario-pills" role="group" aria-label="Preset scenarios"><button data-scenario="safe" class="scenario active">Normal trade</button><button data-scenario="large" class="scenario">Oversized</button><button data-scenario="stale" class="scenario">Stale price</button><button data-scenario="loss" class="scenario">Loss breach</button></div>
+          <form id="intent-form">
+            <div class="field-row"><label>Market<select name="market"><option>BTC-PERP</option><option>ETH-PERP</option><option>SOL-PERP</option><option>HYPE-PERP</option></select></label><label>Direction<select name="side"><option value="LONG">Long</option><option value="SHORT">Short</option></select></label></div>
+            <div class="field-row"><label>Order notional <span>USDso</span><input name="notional" type="number" min="0" step="1" value="850" required/></label><label>Leverage <span>×</span><input name="leverage" type="number" min="1" step="1" value="5" required/></label></div>
+            <div class="field-row"><label>Max slippage <span>bps</span><input name="slippageBps" type="number" min="0" step="1" value="25" required/></label><label>Mark price age <span>sec</span><input name="markAgeSeconds" type="number" min="0" step="1" value="2" required/></label></div>
+            <label>Daily realized loss <span>USDso</span><input name="dailyLoss" type="number" min="0" step="1" value="80" required/></label>
+            <button class="submit-btn" type="submit"><span>Evaluate trade intent</span><span>→</span></button>
+          </form>
+        </section>
+        <section class="panel result-panel" aria-labelledby="result-heading">
+          <div class="panel-heading"><div><span class="panel-kicker">02 / INDEPENDENT GATE</span><h3 id="result-heading">Policy decision</h3></div><span class="check-icon">✓</span></div>
+          <div class="decision-area"><div class="radial"><span class="radial-inner" id="decision-symbol">✓</span></div><div class="decision-label" id="decision-label">AWAITING INTENT</div><p id="decision-explanation">Run a scenario to see the firewall's independent decision.</p></div>
+          <div class="decision-details"><div><span>REASON CODE</span><strong id="decision-reason">—</strong></div><div><span>APPROVED NOTIONAL</span><strong id="decision-notional">—</strong></div><div><span>EXECUTION STATUS</span><strong>SIMULATED ONLY</strong></div></div>
+          <div class="security-note"><span>⌁</span><p>In production, the executor must exclusively control the trading key or authorized operator path. This page is an illustrative simulation, not an enforced live security boundary.</p></div>
+        </section>
+      </div>
+
+      <section class="settings-and-flow">
+        <article class="panel settings-panel"><div class="panel-heading"><div><span class="panel-kicker">03 / CONFIGURATION</span><h3>Active risk policy</h3></div><span class="mini-tag">EDITABLE</span></div><div class="setting-list"><label><span>Max order size <small>USDso</small></span><input id="limit-order" type="number" min="1" value="1500"/></label><label><span>Max leverage <small>×</small></span><input id="limit-leverage" type="number" min="1" value="10"/></label><label><span>Max price age <small>sec</small></span><input id="limit-stale" type="number" min="1" value="15"/></label><label><span>Daily loss cap <small>USDso</small></span><input id="limit-loss" type="number" min="1" value="300"/></label></div><small class="hint">Changing a limit changes the next simulated evaluation. Other policy limits are fixed in the local demo.</small></article>
+        <article class="panel pipeline-panel"><div class="panel-heading"><div><span class="panel-kicker">SYSTEM DESIGN</span><h3>Execution pipeline</h3></div></div><div class="pipeline"><div class="pipe-node"><span>01</span><div><strong>Strategy agent</strong><small>Proposes an intent</small></div></div><div class="connector"></div><div class="pipe-node highlighted"><span>02</span><div><strong>TradeFirewall</strong><small>Evaluates &amp; limits risk</small></div></div><div class="connector"></div><div class="pipe-node"><span>03</span><div><strong>Guarded executor</strong><small>Submits approved orders only</small></div></div></div><p class="pipe-footnote">Execution requires real integration, permission isolation, gas, and on-chain proof. None are represented as complete here.</p></article>
+      </section>
+
+      <section id="activity" class="ledger-section"><div class="section-heading inline"><div><div class="eyebrow subtle">ACCOUNTABILITY</div><h2>Decision ledger</h2><p>Each simulated decision is reproducible and can be exported as JSON.</p></div><button id="export-button" class="secondary-btn">Export JSON ↗</button></div><div class="ledger-wrap"><table><thead><tr><th>TIME</th><th>MARKET</th><th>INTENT</th><th>DECISION</th><th>REASON</th></tr></thead><tbody id="ledger-body"><tr><td colspan="5" class="empty-row">No evaluations yet. Run your first trade scenario above.</td></tr></tbody></table></div></section>
+      <footer>TRADEFIREWALL <span>·</span> AN INDEPENDENT RISK LAYER FOR AUTOMATED PERPS <span>·</span> OFFLINE DEMO</footer>
+    </main>
+  </div>
+</body>
+</html>
