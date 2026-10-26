@@ -2,6 +2,16 @@
 
 **Research date:** October 26, 2026. This is read-only research, not a successful authorization or deployment.
 
+## New live Hideki RPC evidence (October 26)
+
+- `eth_getCode` at documented registry `0x6B2FbfeD328FF5F20C0BE7D3C3437613aFFE8D3a` returned nonempty EIP-1967 proxy bytecode. The implementation slot `0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc` resolved to `0x543d7c170b20e7f9571ad3538201ab9b297a63d3`.
+- Live implementation bytecode contains selectors matching `setOperatorApprovalForPool(address,address,bytes4[],bool)`, `setOperatorApprovalGlobal(address,bytes4[],bool)`, `isApprovedForPool(address,address,address,bytes4)` and `isGloballyApproved(address,address,bytes4)`. This confirms callable interface *shapes*, not parameter names or grant safety.
+- Read-only `isGloballyApproved(address,address,bytes4)(bool)` returned `false` for test wallet `0xb17f4AaA37B5E73F8F453935e87278D0D7B24E1D` used as both owner and operator, checking `0x80054449`.
+- The actual ZRO PerpPool at `0x2a1822b02039ddf0e293f3f7243673fc03eaf16c` accepted the **read-only** `isOperatorAuthorized(address,address,bytes4)(bool)` call (selector `0xa8cb3794`) and returned `false` for that same owner/operator/capability combination. The official `placeOrderFor(address,bool,uint64,uint256,uint256,uint64,uint8,uint8,address,uint96)` signature hashes to `0x80054449`.
+- `scripts/deploy/operator-permission.ts` now includes an injectable read-only `inspectPerpPoolOperatorAuthorization` with chain, pool-bytecode, and strict bool-response validation. It intentionally returns `readyForTrading:false` even when the permission getter returns `true`: no deployed firewall, compatible contract-operator grant, or authoritative risk check was proven.
+
+**What remains unknown:** exact owner/pool/operator argument names of registry functions from verified source, successful *contract* operator grant and execution path, and whether independent owner order paths bypass the gate. Do not send guessed grant transactions.
+
 ## Confirmed from dreamDEX official documentation
 
 - Somnia Hideki testnet is chain ID `50383`, with `OperatorPermissionsRegistry` at `0x6B2FbfeD328FF5F20C0BE7D3C3437613aFFE8D3a`. [Perps developer guide](https://app.testnet.dreamdex.io/docs/developers/perps-testnet).
