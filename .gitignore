@@ -1,6 +1,8 @@
 node_modules/
 dist/
 coverage/
+cache/
+out/
 .env
 .env.*
 *.key

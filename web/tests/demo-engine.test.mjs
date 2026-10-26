@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluateIntent, defaultLimits } from '../demo-engine.mjs';
 
-const base = { market: 'BTC-PERP', side: 'LONG', notional: 850, leverage: 5, slippageBps: 25, markAgeSeconds: 2, dailyLoss: 80 };
+const base = { market: 'BTC-PERP', side: 'LONG', notional: 850, leverage: 5, slippageBps: 25, markAgeSeconds: 2, dailyLoss: 80, positionNotional: 0, equity: 5000 };
 
 test('safe trade is allowed', () => {
   assert.equal(evaluateIntent(base, defaultLimits).decision, 'ALLOW');

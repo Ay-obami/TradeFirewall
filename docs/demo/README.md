@@ -12,9 +12,11 @@ Visit `http://localhost:8080/web/`.
 Or run the deterministic demo-engine unit tests:
 
 ```bash
-node --test web/tests/demo-engine.test.mjs
+node --test web/tests/*.test.mjs
 ```
 
-The UI demonstrates an automated trader proposing an order, a separate risk policy making one of three decisions (`ALLOW`, `RESIZE`, `BLOCK`), editable limits, preset scenarios, and a JSON-exportable local ledger. Nothing leaves the browser: no wallet connection, trading key, chain RPC or dreamDEX SDK is used by this demo.
+The UI demonstrates an automated trader proposing an order, a separate risk policy making one of three decisions (`ALLOW`, `RESIZE`, `BLOCK`), editable order/position/exposure limits, preset scenarios, and a JSON-exportable local ledger. The user supplies the simulated market freshness, daily realized loss, equity and signed position (positive long, negative short). Nothing leaves the browser: no wallet connection, trading key, chain RPC or dreamDEX SDK is used by this demo.
 
-Demo calculations use JavaScript numbers for illustrative USDso sizes; the production gate must use fixed-point integer arithmetic and atomic, enforced authorization at the trading/signing boundary. This UI is not proof of deployed or bypass-resistant on-chain enforcement. Later integration should replace this illustrative engine with the shared tested policy engine, expose the signer-enforced execution status, and attach real transaction hashes only after verified Hideki orders.
+The demo accepts **whole USDso amounts and whole leverage multiples only**; it validates safe integers and uses `BigInt` to size orders against the order cap and signed position cap. This is a deliberately constrained browser representation of the integer-microUSD production engine (`src/policy/evaluate.ts`), and `web/tests/policy-parity.test.mjs` compares representative adverse and boundary decisions against that actual engine. The browser demo does not implement reduce-only orders, fractional USDso, wallet signature isolation, or atomic risk reservation. Input snapshots are hypothetical, not authenticated or live.
+
+The exported JSON is a **local simulation audit**, not a trading history: it includes each provided intent, the settings used, all triggered cap reasons, the decision, and the `simulation-only` execution marker. Never present its approved notional as an actually placed or signed trade. Live execution requires integration, an exclusively controlled signing path, and testnet funds; verified transaction hashes should be attached only after orders truly occur.

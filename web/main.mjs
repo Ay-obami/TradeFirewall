@@ -5,10 +5,10 @@ const form = $('intent-form');
 const ledger = [];
 
 const scenarios = {
-  safe: { market: 'BTC-PERP', side: 'LONG', notional: 850, leverage: 5, slippageBps: 25, markAgeSeconds: 2, dailyLoss: 80 },
-  large: { market: 'BTC-PERP', side: 'LONG', notional: 3200, leverage: 5, slippageBps: 25, markAgeSeconds: 2, dailyLoss: 80 },
-  stale: { market: 'ETH-PERP', side: 'SHORT', notional: 900, leverage: 4, slippageBps: 30, markAgeSeconds: 47, dailyLoss: 80 },
-  loss: { market: 'SOL-PERP', side: 'LONG', notional: 700, leverage: 3, slippageBps: 20, markAgeSeconds: 2, dailyLoss: 340 },
+  safe: { market: 'BTC-PERP', side: 'LONG', notional: 850, leverage: 5, slippageBps: 25, markAgeSeconds: 2, dailyLoss: 80, positionNotional: 0, equity: 5000 },
+  large: { market: 'BTC-PERP', side: 'LONG', notional: 3200, leverage: 5, slippageBps: 25, markAgeSeconds: 2, dailyLoss: 80, positionNotional: 1500, equity: 5000 },
+  stale: { market: 'ETH-PERP', side: 'SHORT', notional: 900, leverage: 4, slippageBps: 30, markAgeSeconds: 47, dailyLoss: 80, positionNotional: 0, equity: 5000 },
+  loss: { market: 'SOL-PERP', side: 'LONG', notional: 700, leverage: 3, slippageBps: 20, markAgeSeconds: 2, dailyLoss: 340, positionNotional: 0, equity: 5000 },
 };
 
 function setScenario(key) {
@@ -26,6 +26,7 @@ function limitsFromUi() {
   return {
     ...defaultLimits,
     maxOrderNotional: number('limit-order'),
+    maxPositionNotional: number('limit-position'),
     maxLeverage: number('limit-leverage'),
     maxMarkAgeSeconds: number('limit-stale'),
     maxDailyLoss: number('limit-loss'),
@@ -35,7 +36,7 @@ function limitsFromUi() {
 function getIntent() {
   const input = key => form.elements.namedItem(key).value;
   const num = key => Number(input(key));
-  return { market: input('market'), side: input('side'), notional: num('notional'), leverage: num('leverage'), slippageBps: num('slippageBps'), markAgeSeconds: num('markAgeSeconds'), dailyLoss: num('dailyLoss') };
+  return { market: input('market'), side: input('side'), notional: num('notional'), leverage: num('leverage'), slippageBps: num('slippageBps'), markAgeSeconds: num('markAgeSeconds'), dailyLoss: num('dailyLoss'), positionNotional: num('positionNotional'), equity: num('equity') };
 }
 
 function renderResult(result) {
@@ -74,7 +75,7 @@ function renderLedger() {
     decisionTd.append(badge);
     tr.append(decisionTd);
     const reasonTd = document.createElement('td');
-    reasonTd.textContent = row.result.reason;
+    reasonTd.textContent = row.result.reasons.join(', ') || row.result.reason;
     tr.append(reasonTd);
     body.append(tr);
   }

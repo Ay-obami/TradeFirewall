@@ -49,9 +49,14 @@ contract TradeFirewallGate {
     address public immutable bot;
     address public immutable tradingOwner;
     bool public paused;
+    bool private entered;
 
     mapping(address => MarketLimits) public markets;
     mapping(uint64 => bool) public usedNonces;
+    /// @notice Gross accepted order quantities since the last administrator renewal.
+    /// This is intentionally NOT net exposure: fills/cancellations cannot replenish it.
+    mapping(address => uint256) public consumedQuantityRaw;
+    mapping(address => uint256) public maxGrossQuantityRaw;
 
     error NotAdministrator();
     error NotBot();
@@ -62,10 +67,13 @@ contract TradeFirewallGate {
     error Expired();
     error Replay();
     error PoolRejected();
+    error MarketAllowanceExhausted();
+    error ReentrantCall();
 
     event MarketConfigured(address indexed pool, bool enabled, uint256 maxQuantityRaw, uint256 minPriceRaw, uint256 maxPriceRaw);
     event PauseChanged(bool paused);
     event OrderForwarded(address indexed pool, uint64 indexed nonce, uint256 proposedQuantity, uint256 sentQuantity, uint128 orderId);
+    event MarketAllowanceRenewed(address indexed pool, uint256 maxGrossQuantityRaw);
 
     constructor(address admin_, address bot_, address tradingOwner_) {
         if (admin_ == address(0) || bot_ == address(0) || tradingOwner_ == address(0)) revert BadParameters();
@@ -79,6 +87,13 @@ contract TradeFirewallGate {
         _;
     }
 
+    modifier nonReentrant() {
+        if (entered) revert ReentrantCall();
+        entered = true;
+        _;
+        entered = false;
+    }
+
     function configureMarket(
         address pool,
         uint256 maxQuantityRaw,
@@ -90,7 +105,29 @@ contract TradeFirewallGate {
             revert BadParameters();
         }
         markets[pool] = MarketLimits(enabled, maxQuantityRaw, minPriceRaw, maxPriceRaw);
+        // Initially permit one max-sized order. A mere limits update must never
+        // replenish an already-used allowance; renewal is a separate admin act.
+        if (maxGrossQuantityRaw[pool] == 0) maxGrossQuantityRaw[pool] = maxQuantityRaw;
         emit MarketConfigured(pool, enabled, maxQuantityRaw, minPriceRaw, maxPriceRaw);
+    }
+
+    /// @notice Explicitly renew gross order capacity. No bot-controlled reset.
+    /// A trading session should renew this limit only after independent review
+    /// of actual positions, fills, pending orders and account risk.
+    function renewMarketAllowance(address pool) external onlyAdmin {
+        if (!markets[pool].enabled) revert BadMarket();
+        consumedQuantityRaw[pool] = 0;
+        emit MarketAllowanceRenewed(pool, maxGrossQuantityRaw[pool]);
+    }
+
+    /// @notice Set total cumulative volume permitted between administrator renewals.
+    /// Never decreases already consumed volume or changes market per-order limits.
+    function setMarketGrossLimit(address pool, uint256 grossQuantityRaw) external onlyAdmin {
+        if (!markets[pool].enabled || grossQuantityRaw == 0 || grossQuantityRaw < consumedQuantityRaw[pool]) {
+            revert BadParameters();
+        }
+        maxGrossQuantityRaw[pool] = grossQuantityRaw;
+        emit MarketAllowanceRenewed(pool, grossQuantityRaw);
     }
 
     function setPaused(bool value) external onlyAdmin {
@@ -100,7 +137,7 @@ contract TradeFirewallGate {
 
     /// @notice Bot may *propose* a quantity. The gate clamps it independently.
     /// No general arbitrary-call functionality is exposed to the bot.
-    function submit(Order calldata o) external returns (uint128 orderId, uint256 submittedQuantity) {
+    function submit(Order calldata o) external nonReentrant returns (uint128 orderId, uint256 submittedQuantity) {
         if (msg.sender != bot) revert NotBot();
         if (paused) revert Paused();
         if (o.deadline < block.timestamp || o.expireTimestampNs <= block.timestamp * 1e9) revert Expired();
@@ -113,8 +150,17 @@ contract TradeFirewallGate {
         if (o.price < limits.minPriceRaw || o.price > limits.maxPriceRaw) revert PriceOutOfBounds();
 
         uint256 size = o.quantity > limits.maxQuantityRaw ? limits.maxQuantityRaw : o.quantity;
+        // Multiple distinct nonces must not evade the per-market size cap.
+        // This conservative gross allowance does not assume orders are filled,
+        // cancelled, profitable, or offset by opposite-side orders.
+        uint256 spent = consumedQuantityRaw[o.pool];
+        uint256 allowance = maxGrossQuantityRaw[o.pool];
+        if (spent >= allowance) revert MarketAllowanceExhausted();
+        uint256 remaining = allowance - spent;
+        if (size > remaining) size = remaining;
         // Mark nonce before external call; any failure reverts this state too.
         usedNonces[o.nonce] = true;
+        consumedQuantityRaw[o.pool] = spent + size;
 
         (bool success, uint128 returnedId) = IDreamDEXPerpPool(o.pool).placeOrderFor(
             tradingOwner, o.isBid, o.userData, o.price, size,

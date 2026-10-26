@@ -1,0 +1,33 @@
+name: TradeFirewall offline verification
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test policy, guarded executor, simulator, and UI
+        run: npm test
+      - name: Test the credential scanner
+        run: node --test tests/security/*.test.mjs
+      - name: Scan tracked repository files for credential material
+        run: git ls-files -z | xargs -0 node scripts/security/scan-secrets.mjs
+      - name: Assert deterministic offline evidence
+        run: |
+          node src/simulator/run-offline.ts fixtures/adversarial-scenarios.json > "$RUNNER_TEMP/tradefirewall-evidence.json"
+          node -e 'const f=require(process.argv[1]); if(f.mode!=="OFFLINE_SIMULATION"||!f.passed||f.metrics.proposed!==9||f.metrics.failedChecks!==0) process.exit(1)' "$RUNNER_TEMP/tradefirewall-evidence.json"
+      - uses: foundry-rs/foundry-toolchain@v1
+      - name: Compile and test Solidity gate (IR optimizer)
+        run: forge test --root . -vv
+
