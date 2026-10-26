@@ -1,8 +1,10 @@
 # dreamDEX Hideki read-only smoke
 
-The read-only smoke is a **real-network check**, not an order submission. It verifies the RPC's `eth_chainId`, initializes the documented Markets SDK without `privateKey`, calls `listPerpMarkets()`, and checks the selected market's MarginBank configuration via `getPerpSystemConfig()`.
+The read-only smoke is a **real-network check**, not an order submission. It verifies the RPC's `eth_chainId`, initializes the documented Markets SDK without `privateKey`, calls `listPerpMarkets()`, and checks the selected market's MarginBank configuration via `getPerpSystemConfig()`. The SDK's `PerpSystemConfig` uses `collateralToken` (not `collateral`); the check also requires a matching `marginBank`, valid factory/liquidation/insurance addresses, and `fullyWired: true`.
 
 Official source: https://app.testnet.dreamdex.io/docs/developers/perps-testnet
+
+SDK return-type reference: https://prd.smk.somnia.host/docs/typescript/api/index/interfaces/PerpSystemConfig
 
 Run this on Node 22.18+ (Node 24 recommended) with internet access:
 
