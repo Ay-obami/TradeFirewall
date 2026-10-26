@@ -5,11 +5,13 @@ Update the table only when each referenced artifact can be verified. **A missing
 | Claim | Minimum proof | Status (October 26, 2026) | Evidence reference |
 | --- | --- | --- | --- |
 | Public source and SDK adapter implementation | Public repository with corresponding source and test coverage | Verified repository exists; offline adapter implemented | https://github.com/Ay-obami/TradeFirewall |
-| Automated offline risk checks | Full Node test command and successful output | Verified 74 Node tests on Ubuntu, October 26, 2026 | `npm test`; CI run must be linked separately |
+| Automated offline risk checks | Full Node test command and successful output | Verified 101 Node tests on Ubuntu, October 26, 2026 | `npm test`; GitHub Actions for commit `2865440` passed |
 | Solidity gate local correctness | Foundry test command and successful output | Verified 14 contract tests locally on Ubuntu, October 26, 2026 | `forge test --root . -vv` |
-| Live SDK market reads | Installed official SDK with real Hideki RPC responses and timestamp | Pending | — |
-| Verified account margin and daily-loss state | Actual account-scoped protocol reads; independently confirmed reference values | Pending | — |
-| Wallet gas on Hideki | RPC balance for exact trade/deployment signer, checked immediately before execution | Pending recheck | — |
+| Live SDK market reads | Installed official SDK with real Hideki RPC responses and timestamp | Verified read-only on October 26, 2026: chain 50383, 21 markets, sample ZRO market and system config | `node src/dreamdex-live/smoke-read.ts`; fix commit `1857485` |
+| Account MarginBank diagnostic | Live account-scoped SDK `getMarginAccount` read | Verified read-only on October 26, 2026: wallet `0xb17f4AaA37B5E73F8F453935e87278D0D7B24E1D` returned 0 equity, 0 locked/unlocked collateral and 0 active pools; **advisory only** | `node src/account-state/margin-smoke.ts <PUBLIC_WALLET> <MARGIN_BANK>` |
+| Indexed perps fill-history access | Genuine SDK `getUserFillsPage` read | Verified read-only on October 26, 2026: target wallet had **0** indexed perps fills, no next cursor, valid dataset generation. This is **not** executed-order proof | `getUserFillsPage(<PUBLIC_WALLET>, { marketType: 'PERP', limit: 50 })` on official SDK 0.32.1 |
+| Verified atomic account risk and daily-loss state | Same-block equity, positions, unrealized PnL, and trusted start-of-day baseline | **Pending**: SDK per-call pinning does not expose block identity for merging separate queries | — |
+| Wallet gas on Hideki | RPC balance for exact trade/deployment signer, checked immediately before execution | **0 STT** for `0xb17f4AaA37B5E73F8F453935e87278D0D7B24E1D` during October 26 read-only preflight; recheck before signing | `node scripts/deploy/preflight.ts` with exact wallet and pool; returned `readyForDeployment: false` |
 | Operator permission and deployed firewall | Deployment and permission receipts, explorer links, audited signer controls | Pending | — |
 | **Real perpetual order** | Successful Hideki transaction and evidence of perps order accepted | **Not yet shown** | — |
 | Demo video | Reproducible local demonstration, clearly labeled simulated/live | Pending publication | — |
