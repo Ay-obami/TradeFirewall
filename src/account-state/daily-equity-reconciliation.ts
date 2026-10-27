@@ -7,7 +7,7 @@ type BalanceEvent={kind:string;amount:bigint;blockNumber:bigint;logIndex:number;
 type Coverage={complete:boolean;source:string};
 const same=(a:string|undefined,b:string)=>typeof a==='string'&&a.toLowerCase()===b.toLowerCase();
 const known=new Set(['Deposited','Withdrawn','DepositedFor','AccountCredited','CreditReclaimed',
-  'MainFundedChild','FundedPrincipalReturned','CloseOutMarginSettled']);
+  'MainFundedChild','FundedPrincipalReturned','CloseOutMarginSettled','CollateralLocked','CollateralUnlocked']);
 
 export function reconcileDailyEquity(input:{baseline:Snapshot;current:Snapshot;events:BalanceEvent[];coverage:Coverage}) {
   const {baseline,current,events,coverage}=input;
@@ -26,10 +26,10 @@ export function reconcileDailyEquity(input:{baseline:Snapshot;current:Snapshot;e
     if(seen.has(id))throw Error('DUPLICATE_EVENT');
     seen.add(id);
     const belongs=same(e.account,current.account);
-    if(['Deposited','DepositedFor','AccountCredited'].includes(e.kind)) {
+    if(['Deposited','DepositedFor','AccountCredited','CollateralUnlocked'].includes(e.kind)) {
       if(!belongs)throw Error('IRRELEVANT_EVENT');
       netNonTradingFlowRaw+=e.amount;
-    } else if(['Withdrawn','CreditReclaimed'].includes(e.kind)) {
+    } else if(['Withdrawn','CreditReclaimed','CollateralLocked'].includes(e.kind)) {
       if(!belongs)throw Error('IRRELEVANT_EVENT');
       netNonTradingFlowRaw-=e.amount;
     } else if(e.kind==='MainFundedChild') {
@@ -42,7 +42,9 @@ export function reconcileDailyEquity(input:{baseline:Snapshot;current:Snapshot;e
       else throw Error('IRRELEVANT_EVENT');
     } else if(e.kind==='CloseOutMarginSettled') {
       if(!same(e.from,current.account)&&!same(e.to,current.account))throw Error('IRRELEVANT_EVENT');
-      // Liquidation settlement remains an economic outcome. Already in equity delta.
+      // SDK eventsAbi: stage-4 margin transfer between accounts, not trading PnL.
+      if(same(e.from,current.account))netNonTradingFlowRaw-=e.amount;
+      if(same(e.to,current.account))netNonTradingFlowRaw+=e.amount;
     }
   }
   return Object.freeze({account:current.account,baselineBlock:baseline.blockNumber,

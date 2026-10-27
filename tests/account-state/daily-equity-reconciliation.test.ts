@@ -23,13 +23,32 @@ test('equity delta excludes verified non-trading inflows and outflows',()=>{
   assert.equal(result.riskExecutable,false);
 });
 
-test('correctly signs receiving end of principal repayment and close-outs remain economic losses',()=>{
+test('correctly signs receiving end of principal repayment and accounts for close-out transfers',()=>{
   const result=reconcileDailyEquity({baseline,current,events:[
     event('FundedPrincipalReturned',70n,{child:other,payer:wallet}),
     {...event('CloseOutMarginSettled',90n,{from:wallet,to:other}),logIndex:1},
   ],coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'}});
-  assert.equal(result.netNonTradingFlowRaw,70n);
-  assert.equal(result.tradingPnlRaw,80n);
+  assert.equal(result.netNonTradingFlowRaw,-20n);
+  assert.equal(result.tradingPnlRaw,170n);
+});
+
+test('close-out transfers received are not mistaken for trading profit',()=>{
+  const result=reconcileDailyEquity({baseline,current,events:[event('CloseOutMarginSettled',90n,{from:other,to:wallet})],
+    coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'}});
+  assert.equal(result.netNonTradingFlowRaw,90n);
+  assert.equal(result.tradingPnlRaw,60n);
+});
+
+test('locking and unlocking collateral is not mistaken for a trading loss or gain',()=>{
+  const locked=reconcileDailyEquity({baseline,current:{...current,equityRaw:900n},
+    events:[event('CollateralLocked',100n)],coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'}});
+  assert.equal(locked.tradingPnlRaw,0n);
+  const unlocked=reconcileDailyEquity({baseline,current:{...current,equityRaw:1100n},
+    events:[event('CollateralUnlocked',100n)],coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'}});
+  assert.equal(unlocked.tradingPnlRaw,0n);
+  const mixed=reconcileDailyEquity({baseline,current:{...current,equityRaw:850n},
+    events:[event('CollateralLocked',100n)],coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'}});
+  assert.equal(mixed.tradingPnlRaw,-50n);
 });
 
 test('unverified ledger, unclassified events and inconsistent ranges fail closed',()=>{
