@@ -5,7 +5,7 @@ import { createMarginDiagnostic } from '../../src/account-state/margin-diagnosti
 const account='0x1111111111111111111111111111111111111111' as const;
 const bank='0x2222222222222222222222222222222222222222' as const;
 const pool='0x3333333333333333333333333333333333333333' as const;
-const healthy={unlockedCollateralBalance:1000n,lockedCollateral:200n,activePerpPools:[pool],equity:1300n,withdrawable:900n,imReq:300n,mmReq:150n,cmReq:100n,marginStatus:'HEALTHY'};
+const healthy={unlockedCollateralBalance:1000n,lockedCollateral:200n,activePerpPools:[pool],equity:1300n,withdrawable:900n,imReq:300n,mmReq:150n,cmReq:100n,marginStatus:'HEALTHY',asOfBlock:123456n};
 
 test('SDK cross-margin account diagnostic preserves exact on-chain bigints without promoting them to order authority',async()=>{
   const client={getMarginAccount:async()=>healthy};
@@ -16,6 +16,7 @@ test('SDK cross-margin account diagnostic preserves exact on-chain bigints witho
   assert.deepEqual(actual.activePerpPools,[pool]);
   assert.equal(actual.authority,'ADVISORY_ONLY');
   assert.equal(actual.blockPinScope,'SDK_INTERNAL_SINGLE_CALL');
+  assert.equal(actual.asOfBlock,123456n);
   assert.equal(actual.riskExecutable,false);
   assert.equal('dailyPnlUsd6' in actual,false);
   assert.equal('blockHash' in actual,false);
@@ -34,6 +35,8 @@ test('refuses missing SDK method or incomplete and malformed margin payload',asy
   await assert.rejects(mk({...healthy,equity:'1300'}).read({account,marginBank:bank}),/INVALID_MARGIN_ACCOUNT/);
   await assert.rejects(mk({...healthy,activePerpPools:['bad']}).read({account,marginBank:bank}),/INVALID_MARGIN_ACCOUNT/);
   await assert.rejects(mk({...healthy,imReq:-1n}).read({account,marginBank:bank}),/INVALID_MARGIN_ACCOUNT/);
+  await assert.rejects(mk({...healthy,asOfBlock:undefined}).read({account,marginBank:bank}),/INVALID_MARGIN_ACCOUNT/);
+  await assert.rejects(mk({...healthy,asOfBlock:-1n}).read({account,marginBank:bank}),/INVALID_MARGIN_ACCOUNT/);
 });
 
 test('refuses non-address identity before any RPC or SDK reads',async()=>{

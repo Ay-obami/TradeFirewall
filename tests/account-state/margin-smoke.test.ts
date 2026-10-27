@@ -4,7 +4,7 @@ import { runMarginDiagnosticSmoke } from '../../src/account-state/margin-smoke.t
 
 const account='0x1111111111111111111111111111111111111111' as const;
 const bank='0x2222222222222222222222222222222222222222' as const;
-const state={unlockedCollateralBalance:0n,lockedCollateral:0n,activePerpPools:[],equity:0n,withdrawable:0n,imReq:0n,mmReq:0n,cmReq:0n,marginStatus:'HEALTHY'};
+const state={unlockedCollateralBalance:0n,lockedCollateral:0n,activePerpPools:[],equity:0n,withdrawable:0n,imReq:0n,mmReq:0n,cmReq:0n,marginStatus:'HEALTHY',asOfBlock:42n};
 
 test('read-only smoke reports SDK MarginBank values without claiming risk-executable equity',async()=>{
   const actual=await runMarginDiagnosticSmoke({account,marginBank:bank,readChainId:async()=>50383,loadClient:async()=>({getMarginAccount:async()=>state})});
@@ -12,6 +12,7 @@ test('read-only smoke reports SDK MarginBank values without claiming risk-execut
   assert.equal(actual.equityRaw,'0');
   assert.equal(actual.riskExecutable,false);
   assert.equal(actual.blockPinScope,'SDK_INTERNAL_SINGLE_CALL');
+  assert.equal(actual.asOfBlock,'42');
 });
 
 test('read-only smoke fails closed if SDK method is absent',async()=>{

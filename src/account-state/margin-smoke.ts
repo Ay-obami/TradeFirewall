@@ -20,6 +20,7 @@ export async function runMarginDiagnosticSmoke(input:{
   return Object.freeze({
     mode:'LIVE_ACCOUNT_READ_ONLY' as const,
     chainId:result.chainId,account:result.account,marginBank:result.marginBank,
+    asOfBlock:result.asOfBlock.toString(),
     equityRaw:result.equity.toString(),
     unlockedCollateralRaw:result.unlockedCollateralBalance.toString(),
     lockedCollateralRaw:result.lockedCollateral.toString(),

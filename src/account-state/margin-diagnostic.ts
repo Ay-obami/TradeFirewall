@@ -1,8 +1,8 @@
 /**
  * A real, read-only SDK MarginBank observation. The SDK pins one margin-account
- * call internally, but does not return a block identifier: therefore this
- * result MUST NOT authorize an order or be joined to another call as if both
- * were one atomic snapshot.
+ * call internally and exposes its asOfBlock. A height alone cannot establish
+ * a block hash or cross-call atomicity, so this advisory result MUST NOT
+ * authorize an order or be joined to independent reads as one snapshot.
  */
 type Address=`0x${string}`;
 const address=/^0x[0-9a-fA-F]{40}$/;
@@ -24,6 +24,7 @@ export function createMarginDiagnostic(deps:{client:MarginDiagnosticSdk;readChai
       const unsigned=['lockedCollateral','withdrawable','imReq','mmReq','cmReq'];
       if (signed.some(k=>typeof state[k]!=='bigint') ||
           unsigned.some(k=>typeof state[k]!=='bigint'||(state[k] as bigint)<0n) ||
+          typeof state.asOfBlock!=='bigint'||(state.asOfBlock as bigint)<0n ||
           !Array.isArray(state.activePerpPools) ||
           state.activePerpPools.some((pool:unknown)=>typeof pool!=='string'||!address.test(pool)) ||
           typeof state.marginStatus!=='string'||state.marginStatus.length===0) {
@@ -31,6 +32,7 @@ export function createMarginDiagnostic(deps:{client:MarginDiagnosticSdk;readChai
       }
       return Object.freeze({
         chainId:50383 as const,account,marginBank,
+        asOfBlock:state.asOfBlock as bigint,
         unlockedCollateralBalance:state.unlockedCollateralBalance as bigint,
         lockedCollateral:state.lockedCollateral as bigint,
         activePerpPools:Object.freeze([...(state.activePerpPools as Address[])]),
