@@ -38,3 +38,18 @@ test('end-to-end report refuses unclassified bank events rather than claiming au
   const voucher={...locked,topics:['0x'+'0'.repeat(64),locked.topics[1]],data:'0x'+word(20n)};
   await assert.rejects(createDailyPnlReport({rpc:makeRpc(voucher)}).read({account,asOfBlock:7n}),/UNCLASSIFIED_BANK_EVENT/);
 });
+
+test('unlocked-equity report keeps trading fees as PnL evidence rather than subtracting them as deposits',async()=>{
+  const fee={...locked,topics:['0x2a2899ae8177fb54d81544d727d24141bf8fd23e78e721fe56cda337d397044b',...locked.topics.slice(1)],
+    data:'0x'+word(20n)+word(6n)};
+  const got=await createDailyPnlReport({rpc:makeRpc(fee)}).read({account,asOfBlock:7n});
+  assert.equal(got.netNonTradingFlowRaw,0n);
+  assert.equal(got.tradingPnlRaw,-30n);
+});
+
+test('unlocked-equity report refuses unverified voucher semantics even though the log wire layout is decoded',async()=>{
+  const credit={...locked,topics:['0xbb4e4e24c267479b5516cddb733818a304e89c317fcc3bf1af08ff3d470ca577',
+    ...locked.topics.slice(1)],data:'0x'+word(20n)};
+  await assert.rejects(createDailyPnlReport({rpc:makeRpc(credit)}).read({account,asOfBlock:7n}),
+    /UNVERIFIED_EXTERNAL_FLOW_SEMANTICS/);
+});

@@ -18,6 +18,9 @@ export function createDailyPnlReport(deps:{rpc:Rpc}){
       const current=await equity.read({account:input.account,blockNumber:input.asOfBlock});
       const ledger=await collectMarginBankLogs({rpc:deps.rpc,fromExclusive:baseline.blockNumber,toInclusive:current.blockNumber});
       const events=decodeKnownBankFlows(ledger.logs,input.account);
+      // Voucher account credits and repayments have unverified economic
+      // semantics. A parseable log is not yet a defensible PnL adjustment.
+      if(events.some(event=>event.category==='voucher'))throw Error('UNVERIFIED_EXTERNAL_FLOW_SEMANTICS');
       const result=reconcileDailyEquity({baseline,current,events,coverage:ledger.coverage});
       return Object.freeze({...result,utcDayStartSec:boundary.utcDayStartSec,
         decodedFlowCount:events.length,rawBankLogCount:ledger.logs.length,

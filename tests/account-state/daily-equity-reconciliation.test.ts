@@ -21,6 +21,8 @@ test('equity delta excludes verified non-trading inflows and outflows',()=>{
   assert.equal(result.tradingPnlRaw,20n);
   assert.equal(result.netNonTradingFlowRaw,130n);
   assert.equal(result.riskExecutable,false);
+  assert.equal(result.provisionalFlowAdjustedDeltaRaw,20n);
+  assert.equal(result.economicPnlProven,false);
 });
 
 test('correctly signs receiving end of principal repayment and accounts for close-out transfers',()=>{
@@ -60,4 +62,33 @@ test('unverified ledger, unclassified events and inconsistent ranges fail closed
   assert.throws(()=>reconcileDailyEquity({...request,coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'},events:[event('Deposited',1n,{account:other})]}),/IRRELEVANT_EVENT/);
   assert.throws(()=>reconcileDailyEquity({...request,coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'},current:{...current,account:other}}),/MISMATCHED_ACCOUNT/);
   assert.throws(()=>reconcileDailyEquity({...request,coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'},events:[{...event('Deposited',1n),blockNumber:21n}]}),/EVENT_OUTSIDE_RANGE/);
+});
+
+test('all trading and configuration events remain visible evidence but are never subtracted as external cash',()=>{
+  const examples=[
+    ['PositionUpdated',0n],['FundingSettled',0n],['FeeCharged',23n],['RebatePaid',45n],
+    ['AutoDeleveraged',0n],['BadDebtAbsorbed',12n],['LiquidationOrderPanicked',0n],
+    ['IsolatedModeSet',0n],['MaxLeverageSet',0n],['BuilderFeeCharged',3n],
+  ] as const;
+  const events=examples.map(([kind,amount],i)=>({...event(kind,amount),logIndex:i}));
+  const result=reconcileDailyEquity({baseline,current,events,coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'}});
+  assert.equal(result.netNonTradingFlowRaw,0n);
+  assert.equal(result.tradingPnlRaw,150n);
+});
+
+test('total economic equity does not subtract collateral lock or unlock, whereas unlocked equity does',()=>{
+  const events=[event('CollateralLocked',90n),{...event('CollateralUnlocked',30n),logIndex:1}];
+  const base={baseline,current,events,coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'}};
+  assert.equal(reconcileDailyEquity(base).netNonTradingFlowRaw,-60n);
+  assert.equal(reconcileDailyEquity({...base,equityBasis:'total'}).netNonTradingFlowRaw,0n);
+});
+
+test('position transfer collateral cannot stand alone as proven external cash adjustment',()=>{
+  assert.throws(()=>reconcileDailyEquity({baseline,current,coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'},
+    events:[event('PositionTransferred',40n,{from:wallet,to:other})]}),/UNVERIFIED_POSITION_TRANSFER_SEMANTICS/);
+});
+
+test('caller cannot relabel a trading event as external transfer',()=>{
+  assert.throws(()=>reconcileDailyEquity({baseline,current,coverage:{complete:true,source:'VERIFIED_CHAIN_LOGS'},
+    events:[{...event('FeeCharged',20n),category:'external_transfer'}]}),/EVENT_CATEGORY_MISMATCH/);
 });

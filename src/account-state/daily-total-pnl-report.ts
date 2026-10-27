@@ -41,7 +41,7 @@ export function createDailyTotalPnlReport(deps:{rpc:Rpc;readMarginEquity:ReadMar
         utcDayStartSec:boundary.utcDayStartSec,
         totalEconomicEquityStartRaw:baseline.totalEconomicEquityRaw,
         totalEconomicEquityEndRaw:current.totalEconomicEquityRaw,
-        excludedInternalMarginMoveCount:events.length-externalFlows.length,
+        excludedInternalMarginMoveCount:events.filter(event=>event.category==='internal_collateral').length,
         decodedFlowCount:events.length,rawBankLogCount:ledger.logs.length,
         externalFlowReceipt:Object.freeze({
           complete:false as const,

@@ -1,9 +1,73 @@
 import { evaluateIntent, defaultLimits, demoScenarios, walkthroughCases } from './demo-engine.mjs';
 import { buildSimulationEvidence } from './evidence-export.mjs';
+import { readWalletSnapshot, buildUnsignedDraft } from './wallet-readonly.mjs';
 
 const $ = id => document.getElementById(id);
 const form = $('intent-form');
 const ledger = [];
+let verifiedWallet = null;
+let walletEpoch = 0;
+let walletEventsAttached = false;
+
+function downloadJson(filename, payload) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+function invalidateWallet(message) {
+  walletEpoch++;
+  verifiedWallet = null;
+  $('wallet-address').textContent = 'Not verified';
+  $('wallet-chain').textContent = 'Awaiting read · target 50383';
+  $('wallet-balance').textContent = '— STT (gas only)';
+  $('wallet-time').textContent = '—';
+  $('wallet-status').textContent = message;
+  $('prepare-status').textContent = 'Wallet verification required before preparing a hypothetical unsigned draft.';
+  $('prepare-button').disabled = true;
+}
+
+async function observeWallet(requestPermission) {
+  const provider = window.ethereum;
+  if (!provider || typeof provider.request !== 'function') {
+    invalidateWallet('No injected EVM wallet detected. Install or enable a compatible browser wallet, then retry.');
+    return;
+  }
+  if (!walletEventsAttached && typeof provider.on === 'function') {
+    provider.on('accountsChanged', () => invalidateWallet('Wallet account changed. Refresh to verify the new account.'));
+    provider.on('chainChanged', () => invalidateWallet('Wallet network changed. Refresh on Somnia Hideki (50383).'));
+    walletEventsAttached = true;
+  }
+  const currentEpoch = ++walletEpoch;
+  $('wallet-status').textContent = 'Reading wallet account, chain and native gas balance…';
+  $('wallet-connect').disabled = true;
+  $('wallet-refresh').disabled = true;
+  $('prepare-button').disabled = true;
+  verifiedWallet = null;
+  try {
+    const snapshot = await readWalletSnapshot(provider, requestPermission);
+    if (currentEpoch !== walletEpoch) return;
+    verifiedWallet = snapshot;
+    $('wallet-address').textContent = snapshot.address;
+    $('wallet-chain').textContent = `Somnia Hideki · ${snapshot.chainId} (verified)`;
+    $('wallet-balance').textContent = `${snapshot.nativeBalance} STT (native gas only)`;
+    $('wallet-time').textContent = snapshot.observedAt;
+    $('wallet-status').textContent = 'Live read-only wallet observation complete. No signature or transaction requested.';
+    $('prepare-status').textContent = 'Ready to evaluate hypothetical inputs and download an unsigned simulation draft.';
+    $('prepare-button').disabled = false;
+  } catch (error) {
+    if (currentEpoch !== walletEpoch) return;
+    invalidateWallet(error?.message === 'WRONG_CHAIN'
+      ? 'Wrong network. Switch the wallet to Somnia Hideki (chain 50383) manually, then refresh. No network switch was requested.'
+      : `Wallet read unavailable: ${error?.message ?? 'unknown error'}. No transaction was attempted.`);
+  } finally {
+    $('wallet-connect').disabled = false;
+    $('wallet-refresh').disabled = false;
+  }
+}
 
 function setScenario(key) {
   const scenario = demoScenarios[key];
@@ -116,14 +180,28 @@ $('walkthrough-button').addEventListener('click', () => {
 
 $('export-button').addEventListener('click', () => {
   if (!ledger.length) return;
-  const content = JSON.stringify(buildSimulationEvidence(ledger), null, 2);
-  const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'tradefirewall-offline-policy-evidence.json';
-  a.click();
-  // Give the browser time to start the download before releasing its blob URL.
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  downloadJson('tradefirewall-offline-policy-evidence.json', buildSimulationEvidence(ledger));
+});
+
+$('wallet-connect').addEventListener('click', () => observeWallet(true));
+$('wallet-refresh').addEventListener('click', () => observeWallet(false));
+$('prepare-button').addEventListener('click', () => {
+  if (!verifiedWallet) return;
+  if (!form.reportValidity()) {
+    $('prepare-status').textContent = 'Complete the proposed trade fields before preparing a draft.';
+    return;
+  }
+  const intent = getIntent();
+  const policy = limitsFromUi();
+  const decision = evaluateCurrentIntent();
+  try {
+    const draft = buildUnsignedDraft({ wallet: verifiedWallet, intent, policy, decision });
+    downloadJson('tradefirewall-unsigned-simulation-draft.json', draft);
+    $('prepare-status').textContent = `${decision.decision}: unsigned JSON draft downloaded for ${decision.approvedNotional} USDso. No signature, order submission, or broadcast.`;
+  } catch (error) {
+    $('prepare-status').textContent = `${decision.decision}: no unsigned draft prepared (${error.message}). No order sent.`;
+    if (error.message === 'WALLET_READ_STALE') invalidateWallet('Wallet observation expired. Refresh the read-only balance before preparing another draft.');
+  }
 });
 
 setScenario('safe');

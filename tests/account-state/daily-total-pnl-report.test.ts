@@ -78,3 +78,16 @@ test('position transfers fail with explicit economic-semantics blocker instead o
     /UNVERIFIED_POSITION_TRANSFER_SEMANTICS/,
   );
 });
+
+test('total-equity report counts internal collateral moves separately from trading and ignored bank events',async()=>{
+  const fee={...locked,logIndex:'0x2',topics:['0x2a2899ae8177fb54d81544d727d24141bf8fd23e78e721fe56cda337d397044b',...locked.topics.slice(1)],
+    data:'0x'+word(20n)+word(6n)};
+  const configuration={...locked,logIndex:'0x3',topics:['0xefa3ddbd45a447bf6a1ef2b046cdc926ae618989f87dccd5b9ee839f4c9ea55c',locked.topics[1]],
+    data:'0x'+word(1n)};
+  const got=await createDailyTotalPnlReport(createDeps([locked,deposit,fee,configuration],50n)).read({account,asOfBlock:7n});
+  assert.equal(got.decodedFlowCount,4);
+  assert.equal(got.externalFlowReceipt.classifiedExternalTransferCount,1);
+  assert.equal(got.excludedInternalMarginMoveCount,1);
+  assert.equal(got.netNonTradingFlowRaw,50n);
+  assert.equal(got.riskExecutable,false);
+});

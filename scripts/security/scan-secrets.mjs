@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, lstatSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -19,6 +19,9 @@ export function scanPathAndContents(file, contents) {
   if (/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/.test(contents)) {
     findings.push('private-key-block');
   }
+  if (/\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk_(?:live|test)_[A-Za-z0-9]{16,}|xox[baprs]-[A-Za-z0-9-]{20,})\b/.test(contents)) {
+    findings.push('token-value');
+  }
   return findings;
 }
 
@@ -27,6 +30,10 @@ export function checkFiles(root, names) {
   const findings = [];
   for (const file of names) {
     const full = path.join(root, file);
+    if (path.isAbsolute(file) || file.split(/[\\/]/).includes('..') || lstatSync(full).isSymbolicLink()) {
+      findings.push({ path: file, kind: 'unsafe-file-path' });
+      continue;
+    }
     const data = readFileSync(full);
     const content = data.includes(0) ? '' : data.toString('utf8');
     for (const kind of scanPathAndContents(file, content)) findings.push({ path: file, kind });

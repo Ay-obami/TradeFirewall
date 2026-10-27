@@ -21,8 +21,13 @@ jobs:
         run: npm test
       - name: Test the credential scanner
         run: node --test tests/security/*.test.mjs
+      - name: Test read-only operational health and secret hardening
+        run: node --test scripts/security/*.test.mjs
       - name: Scan tracked repository files for credential material
         run: git ls-files -z | xargs -0 node scripts/security/scan-secrets.mjs
+      - name: Prevent accidental executable release authorization in CI
+        run: |
+          node -e 'const fs=require("node:fs"); const text=fs.readFileSync("scripts/security/health-check.mjs","utf8"); if(/eth_sendRawTransaction|eth_sendTransaction/.test(text)) process.exit(1)'
       - name: Assert deterministic offline evidence
         run: |
           node src/simulator/run-offline.ts fixtures/adversarial-scenarios.json > "$RUNNER_TEMP/tradefirewall-evidence.json"

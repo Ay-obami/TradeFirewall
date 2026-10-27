@@ -16,11 +16,12 @@
       <nav class="nav-links">
         <a class="active" href="#overview"><span>◫</span> Overview</a>
         <a href="#playground"><span>◇</span> Policy playground</a>
+        <a href="#wallet"><span>◈</span> Wallet / prepare</a>
         <a href="#activity"><span>▤</span> Decision ledger</a>
       </nav>
       <div class="side-bottom">
         <div class="environment"><span class="live-dot"></span><div><strong>Somnia Hideki</strong><small>Chain 50383 · Target</small></div></div>
-        <p>Local simulation. No real funds, signer, or network execution.</p>
+        <p>Offline policy simulation. Optional wallet reads are real and read-only; no signing or network execution.</p>
         <div class="build-tag">PRE-DEPLOYMENT · V0.1</div>
       </div>
     </aside>
@@ -29,7 +30,7 @@
       <header class="topbar"><div class="breadcrumbs">Workspace <span>/</span> Firewall Overview</div><div class="top-right"><span class="outline-pill"><span class="amber-dot"></span> SIMULATION MODE</span><span class="avatar">AY</span></div></header>
       <section class="hero">
         <div class="eyebrow"><span class="dot"></span> EXECUTION CONTROL LAYER <span class="line"></span> DREAMDEX PERPS</div>
-        <div class="hero-copy"><div><h1>Trust the strategy.<br/><em>Verify the trade.</em></h1><p>An independent decision gate for AI agents and algorithmic trading bots. Every proposed trade meets your limits before it reaches execution.</p><a class="primary-btn" href="#playground">Try the policy gate <span>↗</span></a></div><div class="hero-motif" aria-hidden="true"><div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit o3"></div><div class="core-symbol">✳</div><span class="floating-tag t1">POLICY MATCH</span><span class="floating-tag t2">SIGNED INTENT</span></div></div>
+        <div class="hero-copy"><div><h1>Trust the strategy.<br/><em>Verify the trade.</em></h1><p>An independent decision gate for AI agents and algorithmic trading bots. Every proposed trade meets your limits before it reaches execution.</p><a class="primary-btn" href="#playground">Try the policy gate <span>↗</span></a></div><div class="hero-motif" aria-hidden="true"><div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit o3"></div><div class="core-symbol">✳</div><span class="floating-tag t1">POLICY MATCH</span><span class="floating-tag t2">UNSIGNED DRAFT</span></div></div>
       </section>
 
       <section class="metric-grid" aria-label="Simulation metrics">
@@ -37,6 +38,23 @@
         <article class="metric"><div class="metric-name">ALLOWED <span class="green">●</span></div><strong id="stat-allow">00</strong><small>Within configured limits</small></article>
         <article class="metric"><div class="metric-name">RESIZED <span class="yellow">●</span></div><strong id="stat-resize">00</strong><small>Orders adjusted safely</small></article>
         <article class="metric"><div class="metric-name">BLOCKED <span class="red">●</span></div><strong id="stat-block">00</strong><small>Policy violations caught</small></article>
+      </section>
+
+      <section id="wallet" class="wallet-section" aria-labelledby="wallet-heading">
+        <div class="section-heading"><div><div class="eyebrow subtle">OPTIONAL READ-ONLY WALLET</div><h2 id="wallet-heading">Wallet → firewall</h2><p>Connect an injected EVM wallet to read the selected account, Somnia Hideki network and native STT gas balance. Policy inputs below remain hypothetical.</p></div><span class="mini-tag">NEVER SIGNS / BROADCASTS</span></div>
+        <div class="wallet-grid">
+          <article class="panel wallet-card"><div class="panel-heading"><div><span class="panel-kicker">LIVE WALLET READ · NOT POLICY EVIDENCE</span><h3>Account observation</h3></div><span class="mini-tag">READ ONLY</span></div>
+            <div class="wallet-actions"><button id="wallet-connect" type="button" class="secondary-btn">Connect wallet (account permission)</button><button id="wallet-refresh" type="button" class="secondary-btn" disabled>Refresh read</button></div>
+            <dl class="wallet-facts"><div><dt>Account</dt><dd id="wallet-address">Not connected</dd></div><div><dt>Network</dt><dd id="wallet-chain">Awaiting read · target 50383</dd></div><div><dt>Native balance</dt><dd id="wallet-balance">— STT (gas only)</dd></div><div><dt>Observed</dt><dd id="wallet-time">—</dd></div></dl>
+            <p id="wallet-status" class="wallet-status" role="status" aria-live="polite">No wallet data has been read. Use a browser wallet on Somnia Hideki, chain 50383.</p>
+          </article>
+          <article class="panel wallet-card"><div class="panel-heading"><div><span class="panel-kicker">UNSIGNED · SIMULATION-DERIVED</span><h3>Prepare intent draft</h3></div><span class="mini-tag">NO TRANSACTION</span></div>
+            <p class="wallet-copy">Uses the current trade form and editable local policy. Requires a successful live wallet read on chain 50383, then re-evaluates hypothetical risk values. Rejected intents cannot produce a draft.</p>
+            <button id="prepare-button" type="button" class="submit-btn" disabled><span>Evaluate &amp; prepare unsigned JSON</span><span>→</span></button>
+            <p id="prepare-status" class="wallet-status" role="status" aria-live="polite">Connect and verify a wallet first. This is not a transaction, order, approval or signature request.</p>
+            <small class="hint">Native STT balance is not trading collateral or verified account equity. The output contains no executable transaction calldata, signature, or order-submission authorization.</small>
+          </article>
+        </div>
       </section>
 
       <section id="playground" class="section-heading"><div><div class="eyebrow subtle">INTERACTIVE SIMULATION</div><h2>The policy playground</h2><p>Choose a scenario or craft your own intent. The firewall evaluates it independently against simulated inputs.</p></div><span class="mini-tag">NO ON-CHAIN EXECUTION</span></section>

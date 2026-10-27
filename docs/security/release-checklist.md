@@ -24,6 +24,7 @@
 
 - [ ] Review `git diff --cached --name-only` before pushing; specifically inspect `.env`, `*.age`, key exports, keystores and wallet files.
 - [ ] Run `npm test`, `node --test tests/security/*.test.mjs`, and the tracked-file scanner.
+- [ ] Run `node --test scripts/security/*.test.mjs`, check sanitized read-only RPC health against the intended provider, and rehearse the manual pause/revocation procedure in [operations-runbook.md](operations-runbook.md).
 - [ ] Review automated secret-scanner findings manually. This lightweight guard is not a comprehensive secrets detector or a substitute for credential hygiene.
 - [ ] Verify no known security flaw or exploitable live vulnerability is published; send suspected security vulnerabilities privately to `security@dreamdex.io`.
 - [ ] Obtain DoraHacks email whitelist; record submission confirmation before Nov 1, 2026, 23:59 UTC.
@@ -31,4 +32,4 @@
 
 ## CI limitations
 
-The workflow intentionally runs without signing credentials or STT. It tests offline code, checks files for obvious key material and compiles Solidity. It does **not** prove on-chain deployment, operator permission, Foundry execution, integration with the real markets SDK runtime, or successful trading. These require separate evidence.
+The workflow intentionally runs without signing credentials or STT. It tests offline code, checks files for obvious key material, and runs Foundry contract tests. It does **not** prove on-chain deployment, operator permission, integration with the real markets SDK runtime, or successful trading. These require separate evidence.

@@ -50,6 +50,12 @@ contract PermissionOwner {
         selectors[0] = bytes4(keccak256("placeOrderFor(address,bool,uint64,uint256,uint256,uint64,uint8,uint8,address,uint96)"));
         registry.setOperatorApprovalForPool(pool, operator, selectors, true);
     }
+
+    function revoke(LocalApprovalRegistry registry, address pool, address operator) external {
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = bytes4(keccak256("placeOrderFor(address,bool,uint64,uint256,uint256,uint64,uint8,uint8,address,uint96)"));
+        registry.setOperatorApprovalForPool(pool, operator, selectors, false);
+    }
 }
 
 contract LocalBot {
@@ -118,5 +124,66 @@ contract OperatorGrantSimulationTest {
         require(pool.calls() == 0, "direct order recorded");
         bot.submit(gate, order());
         require(pool.calls() == 1 && pool.lastCaller() == address(gate), "gate route not accepted");
+    }
+
+    function testRevocationStopsAlreadyConfiguredGateWithoutConsumingNonceOrAllowance() public {
+        owner.grant(registry, address(pool), address(gate));
+        bot.submit(gate, order());
+        require(pool.calls() == 1, "initial grant not effective");
+        require(gate.consumedQuantityRaw(address(pool)) == 100, "initial allowance missing");
+
+        owner.revoke(registry, address(pool), address(gate));
+        require(!pool.isOperatorAuthorized(address(owner), address(gate), PLACE_ORDER_FOR), "revoke not persisted");
+        TradeFirewallGate.Order memory nextOrder = order();
+        nextOrder.nonce = 2;
+        try bot.submit(gate, nextOrder) { revert("revoked grant still traded"); }
+        catch {
+            require(!gate.usedNonces(2), "reverted nonce consumed");
+            require(gate.consumedQuantityRaw(address(pool)) == 100, "reverted quantity consumed");
+            require(pool.calls() == 1, "revoked call reached pool");
+        }
+
+        owner.grant(registry, address(pool), address(gate));
+        gate.renewMarketAllowance(address(pool));
+        bot.submit(gate, nextOrder);
+        require(pool.calls() == 2 && gate.usedNonces(2), "regrant not effective");
+    }
+
+    function testDirectBotBypassCannotExploitRevocationOrOtherPoolGrant() public {
+        owner.grant(registry, address(otherPool), address(bot));
+        owner.grant(registry, address(pool), address(gate));
+        owner.revoke(registry, address(pool), address(gate));
+        (bool accepted, uint128 orderId) = bot.directPlace(pool, address(owner));
+        require(!accepted && orderId == 0, "different-pool grant became global");
+        require(pool.calls() == 0, "unapproved bot direct order recorded");
+        try bot.submit(gate, order()) { revert("revoked gate remained authorized"); }
+        catch { require(!gate.usedNonces(1), "rejected order used nonce"); }
+    }
+
+    function testExpiredSnapshotLikeOrderCannotExecuteEvenWithPersistedGrant() public {
+        owner.grant(registry, address(pool), address(gate));
+        TradeFirewallGate.Order memory staleOrder = order();
+        staleOrder.deadline = 0;
+        staleOrder.expireTimestampNs = 0;
+        try bot.submit(gate, staleOrder) { revert("stale order accepted"); }
+        catch {
+            require(pool.calls() == 0, "expired order reached pool");
+            require(!gate.usedNonces(1), "expired order reserved nonce");
+            require(gate.consumedQuantityRaw(address(pool)) == 0, "expired order consumed allowance");
+        }
+    }
+
+    function testPausedGateRejectsPreviouslyPreparedOrderDespitePersistentApproval() public {
+        owner.grant(registry, address(pool), address(gate));
+        TradeFirewallGate.Order memory prepared = order();
+        gate.setPaused(true);
+        try bot.submit(gate, prepared) { revert("stale unpaused state permitted order"); }
+        catch {
+            require(pool.calls() == 0, "paused order reached pool");
+            require(!gate.usedNonces(1), "paused order consumed nonce");
+        }
+        gate.setPaused(false);
+        bot.submit(gate, prepared);
+        require(pool.calls() == 1, "fresh unpaused execution denied");
     }
 }
