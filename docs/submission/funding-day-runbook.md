@@ -1,29 +1,43 @@
 # TradeFirewall — funding-day integration runbook
 
-This is a **future execution checklist**, not proof that the wallet is funded, the firewall deployed, or a perp order placed. Do not execute any signing step until its destination, calldata, wallet and permission scope have been reviewed by the owner.
+**Operational checklist, not an execution record.** Receiving STT or paper USDso does not by itself make live trading safe. No deployment, on-chain permission grant, accepted order, or fill is claimed here. Use Hideki chain ID `50383`; independently confirm every address and ABI before signing. No private keys, seed phrases, or bearer tokens belong in evidence files.
 
-## Read-only gate — run first
+## Gate 0 — non-signing readiness (required before spending gas)
 
-1. Verify the exact wallet address and which account holds usable paper USDso. The previously checked TradeFirewall wallet is `0xb17f4AaA37B5E73F8F453935e87278D0D7B24E1D`; it returned 0 STT **and 0 MarginBank collateral/equity** on October 26. Both gas and usable trading collateral are prerequisites. Never import a production seed or paste a private key in a terminal or support ticket.
-2. Verify `cast chain-id --rpc-url https://api.hideki2.infra.testnet.somnia.network` returns `50383`.
-3. Install the documented official SDK version in the local checkout and run `node src/dreamdex-live/smoke-read.ts`. This is **market/configuration read proof only**.
-   Run `node src/account-state/margin-smoke.ts <PUBLIC_WALLET_ADDRESS> <VERIFIED_MARGIN_BANK>` for a genuine **advisory-only** account read. The reported `riskExecutable: false` must not be overridden just because the API call succeeds.
-4. Run `node scripts/deploy/preflight.ts <PUBLIC_WALLET_ADDRESS> <VERIFIED_POOL_ADDRESS>`. If it exits nonzero, stop; a zero gas balance must not be bypassed. A green preflight does **not** prove operator approval or live trading safety.
-5. Run `npm test`, `forge test --root . -vv`, and `node scripts/security/scan-secrets.mjs`; record any failures. Confirm CI is green for the commit being demonstrated.
+1. Confirm the exact intended perps pool, market ID, MarginBank, chain ID, verified contract implementations and deployed bytecode. Pin the ABI to observed chain code, not just an SDK package name. The previously checked account was `0xb17f4AaA37B5E73F8F453935e87278D0D7B24E1D` and showed zero STT and zero MarginBank collateral on October 26; re-read current balances.
+2. Run `node src/dreamdex-live/smoke-read.ts`, `node src/account-state/margin-smoke.ts <PUBLIC_WALLET> <VERIFIED_MARGIN_BANK>`, and `node scripts/deploy/preflight.ts <PUBLIC_WALLET> <VERIFIED_POOL>`. Record chain, market, account and operator observations. A working SDK call alone does not prove safe trade authorization.
+3. Verify independently that the owner can authorize **the deployed gate contract** as perps operator for the exact pool and `placeOrderFor` selector. Check `isOperatorAuthorized(owner,gate,selector)` against the official on-chain registry. A direct bot-to-pool operator grant must remain **false**.
+4. Independently validate a coherent risk snapshot: current total economic equity, usable collateral, open positions and exposure, loss since verified UTC-day baseline, and trusted prices / USD6 conversion. Both daily-loss assessment and price conversion must be genuinely `riskExecutable: true` on verified inputs. The provisional daily-PnL report and unverified quote bridge must **not** be used to enable a real order.
+5. Run `npm test`, `forge test --root . -vv`, and `node scripts/security/scan-secrets.mjs` on the exact candidate commit. Check corresponding remote CI separately. The policy must reject bad/stale reads, oversize orders and exhausted daily-loss budgets *before* a signer can reach the execution path.
 
-## Signing gate — not yet authorized or complete
+**Stop here if any read or operator compatibility is unverified.** Wallet funding cannot override the risk fail-closed behavior.
 
-The following steps **remain pending** even after STT arrives:
+## Gate 1 — funded wallet and role review
 
-1. Resolve official perps operator permissions and verify whether the TradeFirewall contract itself can be an approved operator on the intended account. Inspect the exact contract ABI, supported selectors, roles, token approval implications and signer limitations. The current gate is an experimental defense-in-depth contract, not a verified operator for dreamDEX.
-2. Obtain a real, coherent, account-scoped collateral/equity/position/daily-PnL reader. Voucher eligibility and market configuration are advisory data; they must not stand in for equity or loss calculations.
-3. Review compiled deployment bytecode, constructor arguments, wallet nonce, gas estimate, chain ID, destination and maximum transaction cost. Confirm the private key stays exclusively under wallet-owner control.
-4. If and only if all permission and risk gates are verified, deploy/authorize using the narrowest approved permissions, then place the smallest suitable real order via the guarded adapter. Avoid using extra bounty USDso in a Perps Arena account if disallowed by the organizers.
-5. Reconcile the transaction receipt **and** the exchange order record using independent reads. Transaction success alone does not prove a perps order was accepted or filled.
+- Confirm sufficient native STT for each **actual transaction signer** (deployer, admin, owner granting operator permission, and bot submitting the order; roles may share addresses only after explicit review). Estimate worst-case total gas before sending anything.
+- Confirm separately that the designated **trading owner** has usable paper USDso collateral in the correct account/pool. STT pays gas; it is not margin collateral. Check organizer restrictions on source/use of paper assets.
+- Record public addresses, role ownership, intended pool, target market, chain ID, intended max size and price limits, daily-loss limit and gross cap. Never paste or collect signing secrets.
 
-## Evidence and submission
+## Gate 2 — ordered on-chain execution (pending until performed)
 
-- Save the explorer transaction URL, chain ID, wallet, order ID, block number and time, market, intent, preflight snapshot, policy decision, exact order response and reconciliation outcome. Exclude signer secrets and bearer tokens.
-- Film or capture the real accepted order separately from simulated rejected/resized orders. Keep the demo's `OFFLINE_SIMULATION` export labeled truthfully.
-- Update [`evidence-register.md`](evidence-register.md); publish two or three accurate X posts tagging `@DreamDEXSomnia`; submit the DoraHacks Build only once the approved email is whitelisted.
-- Confirm submission appears successfully on DoraHacks before **November 1, 2026, 23:59 UTC**.
+| Order | Signer | Transaction or check | Required verification |
+| --- | --- | --- | --- |
+| 1 | Deployer | Deploy `TradeFirewallGate(admin, bot, tradingOwner)` with reviewed compiled bytecode | Explorer receipt, verified constructor args, runtime bytecode and immutable roles |
+| 2 | Admin | Call `configureMarket` for the **exact** pool/market and conservative price/size parameters | Read back allowlist, constraints, pause state and market identity |
+| 3 | Admin | Call `setMarketGrossLimit` and provision only narrowly scoped one-use allowance as designed | Read back cap, consumed gross amount and allowance expiration |
+| 4 | Trading owner | Approve **gate address** as operator for the relevant perps pool and order selector | `isOperatorAuthorized(owner, gate, selector) == true`; separately show `isOperatorAuthorized(owner, bot, selector) == false` |
+| 5 | Read-only verifier | Recheck bytecode, roles, actual pool, market configuration, gross budget, owner collateral and independently verified risk data | Persist timestamped go/no-go attestation; any mismatch stops execution |
+| 6 | Bot | With a fresh, approved risk decision, call **`TradeFirewallGate.submit`** for the smallest acceptable real order | Preserve policy decision ID, calldata, tx hash, gas and receipt; never bypass gate by calling pool directly |
+| 7 | Read-only verifier | Query pool/order state and fills independently after confirmation | Separate **tx succeeded**, **order accepted**, **order filled** (including partial/no fill) in the evidence register |
+| 8 | Admin/owner | After demonstration, pause/revoke or narrow unused allowances/permissions according to the security plan | Record actual revocation/pause transactions and resulting state, if performed |
+
+Before each signing action, review chain ID, `to`, calldata, value, nonce, gas estimate, maximum fee and exact permissions in the signer wallet. A successful `Gate.submit` transaction may only prove forwarding: verify any emitted `OrderForwarded` event, exchange acceptance/order ID, and subsequent fill(s) separately. **Do not retry an ambiguous broadcast automatically**; first resolve its nonce and receipt.
+
+## Gate 3 — submission evidence and honest claims
+
+1. Record deployment/configuration/grant/revocation hashes and block numbers, pre/post risk snapshots, bot policy decision, exact order, gate transaction receipt, exchange order ID/state and fill records. Screenshots must show the live network and account/order context without displaying secrets.
+2. Label rejected, resized and simulated intents `OFFLINE_SIMULATION`; never present them as live acceptance or realized daily-loss protection.
+3. Update [`evidence-register.md`](evidence-register.md) with links and observed times. Capture a short real walkthrough only after the chain/exchange reconciliation is complete.
+4. Confirm DoraHacks email whitelist, publish the required truthful X posts tagging `@DreamDEXSomnia`, and verify the actual DoraHacks Build submission before the stated deadline (previously recorded as **November 1, 2026, 23:59 UTC**; reconfirm with organizers).
+
+The remaining funded-account work is **not only gas** if the operator contract interface, independently trusted risk/PnL source, or executable price attestation still fails verification. Record those as blockers rather than claiming completion.
