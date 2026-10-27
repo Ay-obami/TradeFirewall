@@ -4,7 +4,7 @@
 
 This is real contract-derived data, not a fabricated account balance. A successful response supplies the SDK's unlocked/locked collateral, equity, withdrawable funds, active perp pools, and IM/MM/CM requirements. Numeric values remain raw `bigint`s; no assumed decimals or USD conversion are applied.
 
-**Safety boundary:** The SDK pins one `getMarginAccount` call internally, but the returned record has no observed block height/hash. The result is therefore `ADVISORY_ONLY`, `riskExecutable:false`. Combining it with a separate position analytics or PnL call does **not** establish one atomic risk snapshot. TradeFirewall must continue rejecting live automated orders without a verified same-block risk reader and a trusted daily-loss baseline.
+**Safety boundary:** The installed SDK's `MarginAccount` type includes `asOfBlock`, though this diagnostic does not independently attest the block hash, and separate SDK calls may observe different heights. The result is therefore `ADVISORY_ONLY`, `riskExecutable:false`. Combining it with position analytics or PnL without checking the common height and block identity does **not** establish an atomic risk snapshot. TradeFirewall must continue rejecting live automated orders without a trusted daily-loss baseline and coherent risk validation.
 
 The diagnostic requires an injected initialized SDK client and a chain ID reader. Never embed a mnemonic or private key. The diagnostic performs no transaction submission or signing.
 

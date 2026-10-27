@@ -10,10 +10,11 @@ This document identifies read-only, documented account data sources that are mor
 - `client.getPerpPositionAnalytics(ref)` returns marked PnL, funding, notional and per-position margin requirements. Its two internal reads are pinned together; stale-mark rows report `priceable: false`.
 - `client.listPerpPositionAnalytics({ marginBank, account })` reads every *active* position using `1 + 2n` chain calls pinned to one sampled block **within that SDK method**.
 - `client.getPerpPortfolio(account)` and `client.listPerpPositions(account)` are **indexer** activity/history views. The latter is not mark-to-market and cannot supply funding-sensitive fields; zero rows does not prove a flat on-chain account.
+- SDK 0.32.1 contains an **internal** `getMarginEquity(marginBank, account, publicClient, at?)` helper with historical block support, but the public package root does **not export it**, and the package exports map blocks deep `/perp` imports. A production adapter must use supported public APIs or verified raw contract calls; do **not** suggest importing this internal helper as a supported SDK method.
 
 ## Important snapshot limitation
 
-`MarginAccount` itself does **not** expose a `blockNumber` or block hash. Although `getMarginAccount` and `listPerpPositionAnalytics` each pin their *internal* calls, invoking them separately may sample **different block heads**. Neither response proves shared-block identity. An integration must not sum account equity from one response with positions or performance from another and label that combination atomic. Use a verified block-pinned ABI/RPC reader (or a method that returns a verifiable shared block reference), otherwise fail closed for strict risk authorization.
+The installed SDK package's `MarginAccount` type **does** expose `asOfBlock`, but not a block hash. Although `getMarginAccount` and `listPerpPositionAnalytics` each pin their *internal* calls, invoking them separately may sample **different block heads**. Compare their reported heights and independently validate the block hash before attempting to combine them. An explicit historical height needs a verified raw contract reader or another supported public API; the internal SDK helper is not a public import. This corrects an earlier claim that no SDK account result disclosed its block number.
 
 No documented method above directly supplies TradeFirewall's independent **daily realized PnL** or a trusted start-of-day equity baseline. Daily-loss limits must stay fail-closed until those are sourced and verified separately.
 

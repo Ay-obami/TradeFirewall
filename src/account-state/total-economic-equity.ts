@@ -1,5 +1,7 @@
-/** Total economic equity = unlocked SDK equity + locked collateral, block-pinned.
- * The adapter should call official SDK getMarginEquity(bank,account,client,block).
+/** Total economic equity = unlocked MarginBank equity + locked collateral, block-pinned.
+ * The injected reader must be implemented using verified raw MarginBank calls at
+ * the requested block. SDK 0.32.1 contains an internal getMarginEquity helper,
+ * but the package does not publicly export that function.
  * These raw collateral units must not be fed into USD6 risk policy as-is.
  */
 const BANK='0x478769E1177C0773c43A593DCCc4Ad15F15F1394';
