@@ -10,6 +10,15 @@ export const defaultLimits = Object.freeze({
   maxDailyLoss: 300,
 });
 
+// Reproducible, hypothetical fixtures. These are never fetched from a wallet or RPC.
+export const demoScenarios = Object.freeze({
+  safe: Object.freeze({ market: 'BTC-PERP', side: 'LONG', notional: 850, leverage: 5, slippageBps: 25, markAgeSeconds: 2, dailyLoss: 80, positionNotional: 0, equity: 5000 }),
+  large: Object.freeze({ market: 'BTC-PERP', side: 'LONG', notional: 3200, leverage: 5, slippageBps: 25, markAgeSeconds: 2, dailyLoss: 80, positionNotional: 1500, equity: 5000 }),
+  stale: Object.freeze({ market: 'ETH-PERP', side: 'SHORT', notional: 900, leverage: 4, slippageBps: 30, markAgeSeconds: 47, dailyLoss: 80, positionNotional: 0, equity: 5000 }),
+  loss: Object.freeze({ market: 'SOL-PERP', side: 'LONG', notional: 700, leverage: 3, slippageBps: 20, markAgeSeconds: 2, dailyLoss: 340, positionNotional: 0, equity: 5000 }),
+});
+export const walkthroughCases = Object.freeze(['safe', 'large', 'stale', 'loss']);
+
 export function evaluateIntent(intent, limits) {
   const explanations = {
     INVALID_INPUT: 'Missing or invalid risk inputs; no simulated approval is possible.',

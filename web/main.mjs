@@ -1,25 +1,30 @@
-import { evaluateIntent, defaultLimits } from './demo-engine.mjs';
+import { evaluateIntent, defaultLimits, demoScenarios, walkthroughCases } from './demo-engine.mjs';
 import { buildSimulationEvidence } from './evidence-export.mjs';
 
 const $ = id => document.getElementById(id);
 const form = $('intent-form');
 const ledger = [];
 
-const scenarios = {
-  safe: { market: 'BTC-PERP', side: 'LONG', notional: 850, leverage: 5, slippageBps: 25, markAgeSeconds: 2, dailyLoss: 80, positionNotional: 0, equity: 5000 },
-  large: { market: 'BTC-PERP', side: 'LONG', notional: 3200, leverage: 5, slippageBps: 25, markAgeSeconds: 2, dailyLoss: 80, positionNotional: 1500, equity: 5000 },
-  stale: { market: 'ETH-PERP', side: 'SHORT', notional: 900, leverage: 4, slippageBps: 30, markAgeSeconds: 47, dailyLoss: 80, positionNotional: 0, equity: 5000 },
-  loss: { market: 'SOL-PERP', side: 'LONG', notional: 700, leverage: 3, slippageBps: 20, markAgeSeconds: 2, dailyLoss: 340, positionNotional: 0, equity: 5000 },
-};
-
 function setScenario(key) {
-  const scenario = scenarios[key];
+  const scenario = demoScenarios[key];
   if (!scenario) return;
   Object.entries(scenario).forEach(([field, value]) => { form.elements.namedItem(field).value = String(value); });
   document.querySelectorAll('.scenario').forEach(button => {
     button.classList.toggle('active', button.dataset.scenario === key);
     button.setAttribute('aria-pressed', String(button.dataset.scenario === key));
   });
+}
+
+function evaluateCurrentIntent(limitsOverride) {
+  const intent = getIntent();
+  const limits = limitsOverride ?? limitsFromUi();
+  // Visual demo only: no signer and no SDK execution in this page.
+  const result = evaluateIntent(intent, limits);
+  ledger.push({ time: new Date().toISOString(), intent, limits, result, execution: 'simulation-only' });
+  renderResult(result);
+  renderLedger();
+  $('export-button').disabled = false;
+  return result;
 }
 
 function limitsFromUi() {
@@ -75,6 +80,9 @@ function renderLedger() {
     badge.textContent = row.result.decision;
     decisionTd.append(badge);
     tr.append(decisionTd);
+    const approvedTd = document.createElement('td');
+    approvedTd.textContent = `${row.result.approvedNotional.toLocaleString('en-US')} USDso`;
+    tr.append(approvedTd);
     const reasonTd = document.createElement('td');
     reasonTd.textContent = row.result.reasons.join(', ') || row.result.reason;
     tr.append(reasonTd);
@@ -84,17 +92,26 @@ function renderLedger() {
 
 form.addEventListener('submit', event => {
   event.preventDefault();
-  const intent = getIntent();
-  const limits = limitsFromUi();
-  // Visual demo only: no signer and no SDK execution in this page.
-  const result = evaluateIntent(intent, limits);
-  ledger.push({ time: new Date().toISOString(), intent, limits, result, execution: 'simulation-only' });
-  renderResult(result);
-  renderLedger();
+  const result = evaluateCurrentIntent();
+  $('walkthrough-status').textContent = `Single simulated intent: ${result.decision} (${result.reason}). No order sent.`;
 });
 
 document.querySelectorAll('.scenario').forEach(button => {
-  button.addEventListener('click', () => setScenario(button.dataset.scenario));
+  button.addEventListener('click', () => {
+    setScenario(button.dataset.scenario);
+    $('walkthrough-status').textContent = 'Preset loaded. Select Evaluate trade intent to run this simulated case.';
+  });
+});
+
+$('walkthrough-button').addEventListener('click', () => {
+  const outcomes = [];
+  for (const key of walkthroughCases) {
+    setScenario(key);
+    const result = evaluateCurrentIntent(defaultLimits);
+    outcomes.push(`${key}: ${result.decision} (${result.reason})`);
+  }
+  $('walkthrough-status').textContent = `Four simulated cases recorded — ${outcomes.join(' · ')}. All blocked orders have approved notional 0. No wallet signing or network execution.`;
+  $('activity').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 $('export-button').addEventListener('click', () => {
@@ -105,7 +122,8 @@ $('export-button').addEventListener('click', () => {
   a.href = url;
   a.download = 'tradefirewall-offline-policy-evidence.json';
   a.click();
-  URL.revokeObjectURL(url);
+  // Give the browser time to start the download before releasing its blob URL.
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 });
 
 setScenario('safe');

@@ -33,10 +33,14 @@ export function reconcileDailyEquity(input:{baseline:Snapshot;current:Snapshot;e
       if(!belongs)throw Error('IRRELEVANT_EVENT');
       netNonTradingFlowRaw-=e.amount;
     } else if(e.kind==='MainFundedChild') {
+      // A self-referential funding event cannot represent external capital
+      // entering or leaving this account, so never count just one leg.
+      if(same(e.child,current.account)&&same(e.payer,current.account))throw Error('AMBIGUOUS_SELF_TRANSFER');
       if(same(e.child,current.account))netNonTradingFlowRaw+=e.amount;
       else if(same(e.payer,current.account))netNonTradingFlowRaw-=e.amount;
       else throw Error('IRRELEVANT_EVENT');
     } else if(e.kind==='FundedPrincipalReturned') {
+      if(same(e.child,current.account)&&same(e.payer,current.account))throw Error('AMBIGUOUS_SELF_TRANSFER');
       if(same(e.child,current.account))netNonTradingFlowRaw-=e.amount;
       else if(same(e.payer,current.account))netNonTradingFlowRaw+=e.amount;
       else throw Error('IRRELEVANT_EVENT');
