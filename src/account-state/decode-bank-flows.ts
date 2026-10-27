@@ -9,17 +9,21 @@ const TOPICS:Record<string,{kind:string;roles:string[];words:number}>= {
   '0x6eab1c44b6035b703dfba0abf1e04d929563c97ec9808120fdf15a87bc118dca':{kind:'CloseOutMarginSettled',roles:['from','to'],words:1},
   '0x9d952b9056b1ad31790d622a7f5ecf49004b370b41add0e429ac1e9f4b8a3335':{kind:'CollateralLocked',roles:['account','perpPool'],words:1},
   '0x5c87c81b4945a78d177e7c3dfbc9a6eaa971757d39f3b93c514446b47b5a2e1a':{kind:'CollateralUnlocked',roles:['account','perpPool'],words:1},
+  // Layout independently observed on Hideki: account and issuer/source indexed;
+  // amount is the single non-indexed uint256 (tx 0xae41b6f8c4dbea295f6cf6af7cd1dc8412518635936fa54233c40641c3a89a29).
+  '0xbb4e4e24c267479b5516cddb733818a304e89c317fcc3bf1af08ff3d470ca577':{kind:'AccountCredited',roles:['account','source'],words:1},
+  // Deployed Hideki EIP-1967 implementation contains the selector and emits LOG3
+  // (account and source indexed, one amount data word). Reconfirm after upgrades.
+  '0x841ac654b43987d16684cd677b75b4e3eae84b9139c0ce7feb0d45fcd9e5e502':{kind:'CreditReclaimed',roles:['account','source'],words:1},
+  // Indexed child/payer, non-indexed amount/outstandingPrincipal independently
+  // observed on Hideki (tx 0xc038d5a578eddbe357ac1496807161dd585a1340a259598852f942d0c138b96b).
+  '0x04e2caa918a69c3e0d380a68c40c5db84fc12fec03022820849786ebf5aee368':{kind:'FundedPrincipalReturned',roles:['child','payer'],words:2},
 };
-const UNVERIFIED=new Set([
-  '0xbb4e4e24c267479b5516cddb733818a304e89c317fcc3bf1af08ff3d470ca577',
-  '0x841ac654b43987d16684cd677b75b4e3eae84b9139c0ce7feb0d45fcd9e5e502',
-  '0x04e2caa918a69c3e0d380a68c40c5db84fc12fec03022820849786ebf5aee368',
-]);
 const ADDRESS=/^0x[0-9a-fA-F]{40}$/;
 const HASH=/^0x[0-9a-fA-F]{64}$/;
 type RawLog={blockNumber:bigint;logIndex:number;topics:string[];data:string};
 type Decoded={kind:string;amount:bigint;blockNumber:bigint;logIndex:number;
-  account?:string;child?:string;payer?:string;from?:string;to?:string;perpPool?:string};
+  account?:string;child?:string;payer?:string;from?:string;to?:string;perpPool?:string;source?:string};
 
 export function decodeKnownBankFlows(logs:RawLog[],account:string):Decoded[]{
   if(!ADDRESS.test(account))throw Error('INVALID_ACCOUNT');
@@ -27,7 +31,6 @@ export function decodeKnownBankFlows(logs:RawLog[],account:string):Decoded[]{
   for(const log of logs){
     if(!Array.isArray(log.topics)||typeof log.topics[0]!=='string')throw Error('MALFORMED_EVENT');
     const signature=log.topics[0].toLowerCase();
-    if(UNVERIFIED.has(signature))throw Error('UNVERIFIED_EVENT_ABI');
     const spec=TOPICS[signature];
     if(!spec)throw Error('UNCLASSIFIED_BANK_EVENT');
     if(log.topics.length!==spec.roles.length+1||typeof log.data!=='string'||

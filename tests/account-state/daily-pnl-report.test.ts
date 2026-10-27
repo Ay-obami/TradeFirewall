@@ -34,7 +34,7 @@ test('end-to-end report pins day boundary and removes collateral lock from marke
   assert.equal(report.riskExecutable,false);
 });
 
-test('end-to-end report refuses unpublished event ABI rather than claiming authoritative PnL',async()=>{
-  const voucher={...locked,topics:['0xbb4e4e24c267479b5516cddb733818a304e89c317fcc3bf1af08ff3d470ca577',locked.topics[1]],data:'0x'+word(20n)};
-  await assert.rejects(createDailyPnlReport({rpc:makeRpc(voucher)}).read({account,asOfBlock:7n}),/UNVERIFIED_EVENT_ABI/);
+test('end-to-end report refuses unclassified bank events rather than claiming authoritative PnL',async()=>{
+  const voucher={...locked,topics:['0x'+'0'.repeat(64),locked.topics[1]],data:'0x'+word(20n)};
+  await assert.rejects(createDailyPnlReport({rpc:makeRpc(voucher)}).read({account,asOfBlock:7n}),/UNCLASSIFIED_BANK_EVENT/);
 });

@@ -13,6 +13,8 @@ const topics={
   CloseOutMarginSettled:'0x6eab1c44b6035b703dfba0abf1e04d929563c97ec9808120fdf15a87bc118dca',
   CollateralLocked:'0x9d952b9056b1ad31790d622a7f5ecf49004b370b41add0e429ac1e9f4b8a3335',
   AccountCredited:'0xbb4e4e24c267479b5516cddb733818a304e89c317fcc3bf1af08ff3d470ca577',
+  CreditReclaimed:'0x841ac654b43987d16684cd677b75b4e3eae84b9139c0ce7feb0d45fcd9e5e502',
+  FundedPrincipalReturned:'0x04e2caa918a69c3e0d380a68c40c5db84fc12fec03022820849786ebf5aee368',
 };
 
 test('decodes verified indexed bank flow layout and does not confuse remaining data words with amounts',()=>{
@@ -27,8 +29,43 @@ test('decodes verified indexed bank flow layout and does not confuse remaining d
   assert.equal(got[1].payer.toLowerCase(),b.toLowerCase());
 });
 
-test('rejects unsupported credit ABI indexing and any unrecognized bank topic',()=>{
-  assert.throws(()=>decodeKnownBankFlows([{...base,topics:[topics.AccountCredited,topicAddress(a)],data:'0x'+word(1n)}],a),/UNVERIFIED_EVENT_ABI/);
+test('decodes on-chain verified credit issuer and linked-wallet principal return fields',()=>{
+  const got=decodeKnownBankFlows([
+    {...base,topics:[topics.AccountCredited,topicAddress(a),topicAddress(b)],data:'0x'+word(111n)},
+    {...base,logIndex:1,topics:[topics.FundedPrincipalReturned,topicAddress(a),topicAddress(b)],data:'0x'+word(12n)+word(98n)},
+  ],a);
+  assert.deepEqual(got.map(x=>[x.kind,x.amount]),[['AccountCredited',111n],['FundedPrincipalReturned',12n]]);
+  assert.equal(got[0].account.toLowerCase(),a.toLowerCase());
+  assert.equal(got[0].source.toLowerCase(),b.toLowerCase());
+  assert.equal(got[1].child.toLowerCase(),a.toLowerCase());
+  assert.equal(got[1].payer.toLowerCase(),b.toLowerCase());
+});
+
+test('credit issuer is not treated as recipient and payer sees principal return',()=>{
+  const got=decodeKnownBankFlows([
+    {...base,topics:[topics.AccountCredited,topicAddress(a),topicAddress(b)],data:'0x'+word(40n)},
+    {...base,logIndex:1,topics:[topics.FundedPrincipalReturned,topicAddress(a),topicAddress(b)],data:'0x'+word(30n)+word(90n)},
+  ],b);
+  assert.deepEqual(got.map(x=>x.kind),['FundedPrincipalReturned']);
+  assert.equal(got[0].amount,30n);
+});
+
+test('decodes deployed CreditReclaimed LOG3 layout as an account debit without attributing it to source',()=>{
+  const asAccount=decodeKnownBankFlows([{
+    ...base,topics:[topics.CreditReclaimed,topicAddress(a),topicAddress(b)],data:'0x'+word(17n),
+  }],a);
+  assert.deepEqual(asAccount.map(x=>[x.kind,x.amount]),[['CreditReclaimed',17n]]);
+  assert.equal(asAccount[0].account.toLowerCase(),a.toLowerCase());
+  assert.equal(asAccount[0].source.toLowerCase(),b.toLowerCase());
+  const asSource=decodeKnownBankFlows([{
+    ...base,topics:[topics.CreditReclaimed,topicAddress(a),topicAddress(b)],data:'0x'+word(17n),
+  }],b);
+  assert.deepEqual(asSource,[]);
+});
+
+test('rejects malformed credit reclaim event and any unrecognized bank topic',()=>{
+  assert.throws(()=>decodeKnownBankFlows([{...base,topics:[topics.CreditReclaimed,topicAddress(a)],data:'0x'+word(1n)}],a),/MALFORMED_EVENT/);
+  assert.throws(()=>decodeKnownBankFlows([{...base,topics:[topics.AccountCredited,topicAddress(a)],data:'0x'+word(1n)}],a),/MALFORMED_EVENT/);
   assert.throws(()=>decodeKnownBankFlows([{...base,topics:['0x'+'0'.repeat(64)],data:'0x'}],a),/UNCLASSIFIED_BANK_EVENT/);
 });
 
