@@ -46,3 +46,35 @@ test('total-equity report fails closed when an event ABI is unverified',async()=
   const credit={...locked,topics:['0x'+'0'.repeat(64),locked.topics[1]],data:'0x'+word(10n)};
   await assert.rejects(createDailyTotalPnlReport(createDeps([credit])).read({account,asOfBlock:7n}),/UNCLASSIFIED_BANK_EVENT/);
 });
+
+test('voucher credits and repayments cannot be disguised as verified external transfers',async()=>{
+  for(const topic of [
+    '0xbb4e4e24c267479b5516cddb733818a304e89c317fcc3bf1af08ff3d470ca577',
+    '0x841ac654b43987d16684cd677b75b4e3eae84b9139c0ce7feb0d45fcd9e5e502',
+    '0x04e2caa918a69c3e0d380a68c40c5db84fc12fec03022820849786ebf5aee368',
+  ]){
+    const event={...locked,topics:[topic,locked.topics[1],locked.topics[2]],data:'0x'+word(20n)+(topic.startsWith('0x04e2')?word(80n):'')};
+    await assert.rejects(createDailyTotalPnlReport(createDeps([event])).read({account,asOfBlock:7n}),/UNVERIFIED_EXTERNAL_FLOW_SEMANTICS/);
+  }
+});
+
+test('recognized bank deposits do not assert complete cross-boundary external-flow coverage',async()=>{
+  const got=await createDailyTotalPnlReport(createDeps([deposit],50n)).read({account,asOfBlock:7n});
+  assert.equal(got.netNonTradingFlowRaw,50n);
+  assert.equal(got.externalFlowReceipt.complete,false);
+  assert.equal(got.externalFlowReceipt.bankLogsRetrieved,true);
+  assert.equal(got.externalFlowReceipt.classifiedExternalTransferCount,1);
+  assert.equal(got.externalFlowReceipt.crossBoundaryCoverageProven,false);
+  assert.equal(got.riskExecutable,false);
+});
+
+test('position transfers fail with explicit economic-semantics blocker instead of treating collateral movement as standalone cash',async()=>{
+  const positionTransfer={...locked,
+    topics:['0x9ef7ab187d9803bb95074f3925951014616c7a81290d6dc51c66caf586e4e3aa',
+      locked.topics[1],'0x'+'c'.repeat(40).padStart(64,'0'),locked.topics[2]],
+    data:'0x'+word(1n)+word(25n)};
+  await assert.rejects(
+    createDailyTotalPnlReport(createDeps([positionTransfer])).read({account,asOfBlock:7n}),
+    /UNVERIFIED_POSITION_TRANSFER_SEMANTICS/,
+  );
+});

@@ -24,7 +24,7 @@
 | --- | --- | --- | --- |
 | 1 | Deployer | Deploy `TradeFirewallGate(admin, bot, tradingOwner)` with reviewed compiled bytecode | Explorer receipt, verified constructor args, runtime bytecode and immutable roles |
 | 2 | Admin | Call `configureMarket` for the **exact** pool/market and conservative price/size parameters | Read back allowlist, constraints, pause state and market identity |
-| 3 | Admin | Call `setMarketGrossLimit` and provision only narrowly scoped one-use allowance as designed | Read back cap, consumed gross amount and allowance expiration |
+| 3 | Admin | Call `setMarketGrossLimit` and provision only narrowly scoped gross allowance as designed | Read back cumulative cap, consumed gross amount and remaining budget. The on-chain gross allowance has **no expiry**; each order has its own expiration and nonce. |
 | 4 | Trading owner | Approve **gate address** as operator for the relevant perps pool and order selector | `isOperatorAuthorized(owner, gate, selector) == true`; separately show `isOperatorAuthorized(owner, bot, selector) == false` |
 | 5 | Read-only verifier | Recheck bytecode, roles, actual pool, market configuration, gross budget, owner collateral and independently verified risk data | Persist timestamped go/no-go attestation; any mismatch stops execution |
 | 6 | Bot | With a fresh, approved risk decision, call **`TradeFirewallGate.submit`** for the smallest acceptable real order | Preserve policy decision ID, calldata, tx hash, gas and receipt; never bypass gate by calling pool directly |
