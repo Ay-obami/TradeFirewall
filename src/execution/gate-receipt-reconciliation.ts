@@ -93,7 +93,8 @@ export async function verifyGateReceiptEvidence(port:GateReceiptReconciliationPo
   const order=exchange as Record<string,unknown>;
   if(typeof order.owner!=='string'||!ADDRESS.test(order.owner)||!same(order.owner,request.owner)||
     typeof order.pool!=='string'||!ADDRESS.test(order.pool)||!same(order.pool,request.pool)||
-    order.orderId!==id||!['open','accepted','partially_filled','filled','cancelled'].includes(order.status as string)){
+    order.orderId!==id||typeof order.asOfBlock!=='bigint'||order.asOfBlock<blockNumber||
+    !['open','accepted','partially_filled','filled','cancelled'].includes(order.status as string)){
     throw Error('EXCHANGE_ORDER_NOT_VERIFIED');
   }
   if(!same(await port.getBlockHash(blockNumber),r.blockHash))throw Error('GATE_REORG_DETECTED');

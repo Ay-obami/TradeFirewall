@@ -12,7 +12,7 @@ const log={address:gate,topics:[topic,'0x'+pool.slice(2).padStart(64,'0'),'0x'+w
 const receipt={transactionHash:hash,from:bot,to:gate,status:'success',blockNumber:123n,blockHash,logs:[log]};
 const request={chainId:50383,transactionHash:hash,bot,owner,gate,pool,nonce:7n,
   expectedRuntimeCodeHash:runtimeHash,proposedQuantity:9n};
-function port(receiptValue:any=receipt,orderValue:any={owner,pool,orderId:13n,status:'open'}){
+function port(receiptValue:any=receipt,orderValue:any={owner,pool,orderId:13n,status:'open',asOfBlock:124n}){
   return {
     getChainId:async()=>50383,
     getTransactionReceipt:async()=>receiptValue,
@@ -62,7 +62,12 @@ test('refuses altered event fields, duplicate events, and invalid order IDs',asy
 
 test('no exchange order or mismatched exchange ownership cannot become accepted-order evidence',async()=>{
   await assert.rejects(verifyGateReceiptEvidence(port(receipt,null),request),/EXCHANGE_ORDER_NOT_VERIFIED/);
-  await assert.rejects(verifyGateReceiptEvidence(port(receipt,{owner:bot,pool,orderId:13n,status:'open'}),request),/EXCHANGE_ORDER_NOT_VERIFIED/);
+  await assert.rejects(verifyGateReceiptEvidence(port(receipt,{owner:bot,pool,orderId:13n,status:'open',asOfBlock:124n}),request),/EXCHANGE_ORDER_NOT_VERIFIED/);
+});
+
+test('exchange acceptance must be observed no earlier than the gate receipt block',async()=>{
+  await assert.rejects(verifyGateReceiptEvidence(port(receipt,{owner,pool,orderId:13n,status:'open',asOfBlock:122n}),request),/EXCHANGE_ORDER_NOT_VERIFIED/);
+  await assert.rejects(verifyGateReceiptEvidence(port(receipt,{owner,pool,orderId:13n,status:'open'}),request),/EXCHANGE_ORDER_NOT_VERIFIED/);
 });
 
 test('changed block hash during asynchronous reconciliation fails closed',async()=>{
