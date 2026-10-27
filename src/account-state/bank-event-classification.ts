@@ -11,10 +11,10 @@ export type BankEventCategory='external_transfer'|'trading'|'internal_collateral
 type Direction=-1|1;
 type Spec={category:BankEventCategory;amountField:string|null;transferRoles:Readonly<Record<string,Direction>>};
 const empty=Object.freeze({});
-const trading=(field:string|null=null):Spec=>({category:'trading',amountField:field,transferRoles:empty});
-const ignored:Spec={category:'ignored',amountField:null,transferRoles:empty};
-const internal:Spec={category:'internal_collateral',amountField:'amount',transferRoles:empty};
-const transfer=(field:string,roles:Record<string,Direction>):Spec=>({category:'external_transfer',amountField:field,transferRoles:Object.freeze(roles)});
+const trading=(field:string|null=null):Spec=>Object.freeze({category:'trading',amountField:field,transferRoles:empty});
+const ignored:Spec=Object.freeze({category:'ignored',amountField:null,transferRoles:empty});
+const internal:Spec=Object.freeze({category:'internal_collateral',amountField:'amount',transferRoles:empty});
+const transfer=(field:string,roles:Record<string,Direction>):Spec=>Object.freeze({category:'external_transfer',amountField:field,transferRoles:Object.freeze(roles)});
 
 const specs={
   PositionUpdated:trading(),

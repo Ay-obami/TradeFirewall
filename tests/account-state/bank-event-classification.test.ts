@@ -48,3 +48,14 @@ test('fails closed for SDK-omitted voucher and unknown events',()=>{
     assert.throws(()=>classifyBankEvent(name),/UNCLASSIFIED_BANK_EVENT/);
   }
 });
+
+test('event classifications cannot be rewritten by downstream consumers',()=>{
+  const deposited=classifyBankEvent('Deposited');
+  assert.equal(Object.isFrozen(deposited),true);
+  assert.equal(Object.isFrozen(deposited.transferRoles),true);
+  assert.throws(()=>{(deposited as {category:string}).category='ignored';},TypeError);
+  assert.throws(()=>{(deposited.transferRoles as Record<string,number>).account=-1;},TypeError);
+  assert.equal(classifyBankEvent('Deposited').category,'external_transfer');
+  assert.equal(Object.isFrozen(classifyBankEvent('FundingSettled')),true);
+  assert.equal(Object.isFrozen(classifyBankEvent('CollateralLocked')),true);
+});
