@@ -1,0 +1,14 @@
+{
+  "mode": "UNSIGNED_DEPLOYMENT_REVIEW",
+  "chainId": 50383,
+  "deployer": "0xb17f4AaA37B5E73F8F453935e87278D0D7B24E1D",
+  "administrator": "0x4da63430901076bF33Ea7E9EA47CCEb6b5578bA1",
+  "bot": "0xb17f4AaA37B5E73F8F453935e87278D0D7B24E1D",
+  "tradingOwner": "0x4da63430901076bF33Ea7E9EA47CCEb6b5578bA1",
+  "bytecodeLengthBytes": 3456,
+  "estimatedGas": "16294749",
+  "gasPriceWei": "6000000000",
+  "estimatedFeeWei": "97768494000000000",
+  "deployerPendingNonce": "0",
+  "readyToBroadcast": false
+}
