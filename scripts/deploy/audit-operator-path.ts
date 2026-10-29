@@ -8,7 +8,7 @@ const SELECTOR='80054449'.padEnd(64,'0');
 type Rpc=(method:string,params:unknown[])=>Promise<unknown>;
 export function createOperatorPathAudit(rpc:Rpc){
  return async(input:{owner:string;bot:string;pool:string;gate?:string})=>{
-  for(const [k,v] of Object.entries(input))if(!ADDRESS.test(v))throw Error(`INVALID_${k.toUpperCase()}_ADDRESS`);
+  for(const [k,v] of Object.entries(input))if(v!==undefined&&!ADDRESS.test(v))throw Error(`INVALID_${k.toUpperCase()}_ADDRESS`);
   if(input.owner.toLowerCase()===input.bot.toLowerCase())throw Error('OWNER_BOT_ROLE_COLLISION');
   const chain=await rpc('eth_chainId',[]);
   if(chain!=='0xc4cf')throw Error('WRONG_CHAIN');

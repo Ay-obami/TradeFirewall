@@ -45,3 +45,8 @@ test('mismatched block hash is rejected',async()=>{
  };
  await assert.rejects(createOperatorPathAudit(rpc)({owner,bot,pool,gate}),/REORG_DETECTED/);
 });
+test('optional gate address may be omitted without being treated as malformed',async()=>{
+ const result=await createOperatorPathAudit(makeRpc(true,false))({owner,bot,pool});
+ assert.equal(result.reason,'DIRECT_BOT_BYPASS_PRESENT');
+ assert.equal(result.gateOnlyPermission,false);
+});
