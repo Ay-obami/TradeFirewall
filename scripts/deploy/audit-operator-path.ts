@@ -3,13 +3,16 @@ import {HIDEKI_RPC} from './preflight.ts';
 
 const ADDRESS=/^0x[0-9a-fA-F]{40}$/;
 const HASH=/^0x[0-9a-fA-F]{64}$/;
+const ZERO='0x'+'0'.repeat(40);
 const word=(v:string)=>v.slice(2).toLowerCase().padStart(64,'0');
 const SELECTOR='80054449'.padEnd(64,'0');
 type Rpc=(method:string,params:unknown[])=>Promise<unknown>;
 export function createOperatorPathAudit(rpc:Rpc){
  return async(input:{owner:string;bot:string;pool:string;gate?:string})=>{
   for(const [k,v] of Object.entries(input))if(v!==undefined&&!ADDRESS.test(v))throw Error(`INVALID_${k.toUpperCase()}_ADDRESS`);
+  if(Object.values(input).some(v=>v?.toLowerCase()===ZERO))throw Error('ZERO_ADDRESS_ROLE');
   if(input.owner.toLowerCase()===input.bot.toLowerCase())throw Error('OWNER_BOT_ROLE_COLLISION');
+  if(input.gate&&[input.owner,input.bot,input.pool].some(v=>v.toLowerCase()===input.gate!.toLowerCase()))throw Error('GATE_ROLE_COLLISION');
   const chain=await rpc('eth_chainId',[]);
   if(chain!=='0xc4cf')throw Error('WRONG_CHAIN');
   const number=await rpc('eth_blockNumber',[]);
@@ -32,7 +35,8 @@ export function createOperatorPathAudit(rpc:Rpc){
   let gateAuthorized=false,gateDeployed=false;
   if(input.gate){
    const gateCode=await rpc('eth_getCode',[input.gate,number]);
-   gateDeployed=typeof gateCode==='string'&&/^0x(?:[0-9a-fA-F]{2})+$/.test(gateCode);
+   if(typeof gateCode!=='string'||!/^0x(?:[0-9a-fA-F]{2})*$/.test(gateCode))throw Error('INVALID_GATE_CODE');
+   gateDeployed=gateCode!=='0x'&&!/^0x0+$/.test(gateCode);
    if(gateDeployed)gateAuthorized=await check(input.gate);
   }
   if(await readBlock()!==before)throw Error('REORG_DETECTED');

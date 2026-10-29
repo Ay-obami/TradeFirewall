@@ -50,3 +50,20 @@ test('optional gate address may be omitted without being treated as malformed',a
  assert.equal(result.reason,'DIRECT_BOT_BYPASS_PRESENT');
  assert.equal(result.gateOnlyPermission,false);
 });
+
+test('rejects zero addresses and gate/owner/bot/pool collisions before network calls',async()=>{
+ const audit=createOperatorPathAudit(async()=>{throw Error('RPC_SHOULD_NOT_BE_CALLED')});
+ await assert.rejects(audit({owner:'0x'+'0'.repeat(40),bot,pool,gate}),/ZERO_ADDRESS_ROLE/);
+ for(const collision of [owner,bot,pool])await assert.rejects(audit({owner,bot,pool,gate:collision}),/GATE_ROLE_COLLISION/);
+});
+test('gate with missing or malformed bytecode never counts as deployed or approved',async()=>{
+ for(const code of ['0x','0x0000']){
+  const rpc=async(method:string,params:unknown[])=> method==='eth_getCode'&&(params[0] as string).toLowerCase()===gate.toLowerCase()?code:makeRpc(false,true)(method,params);
+  const result=await createOperatorPathAudit(rpc)({owner,bot,pool,gate});
+  assert.equal(result.gateOnlyPermission,false);
+  assert.equal(result.gateDeployed,false);
+  assert.equal(result.reason,'GATE_NOT_DEPLOYED');
+ }
+ const rpc=async(method:string,params:unknown[])=>method==='eth_getCode'&&(params[0] as string).toLowerCase()===gate.toLowerCase()?'garbage':makeRpc(false,true)(method,params);
+ await assert.rejects(createOperatorPathAudit(rpc)({owner,bot,pool,gate}),/INVALID_GATE_CODE/);
+});
