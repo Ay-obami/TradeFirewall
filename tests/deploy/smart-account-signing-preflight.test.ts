@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {inspectSigningRoute,OWNER,BOT,GATE} from '../../scripts/deploy/smart-account-signing-preflight.ts';
+const signer='0x1b0769d6F925d4E613067a34763d3be3AE7e783e';
+const api={ownersOf:async()=>({owners:[{address:signer,kind:'key'}],threshold:1n}),authorityPath:async()=>null,buildExecution:async()=>({signer,gasFloor:2000000n,typedData:{domain:{chainId:50383,verifyingContract:OWNER}}})};
+test('embedded owner is required, bot is not owner; report stays non-executable',async()=>{const x=await inspectSigningRoute(api);assert.equal(x.botIsDirectOwner,false);assert.equal(x.botHasAuthorityPath,false);assert.equal(x.requiredSigner,signer);assert.equal(x.readyForOwnerWrites,false);assert.equal(x.signaturePresent,false);assert.equal(x.transactionBroadcast,false);assert.equal(x.gate,GATE);assert.equal(x.bot,BOT)});
+test('refuses invalid threshold or mismatched signing domain',async()=>{await assert.rejects(inspectSigningRoute({...api,ownersOf:async()=>({owners:[{address:signer,kind:'key'}],threshold:0n})}),/INVALID_OWNER_SET/);await assert.rejects(inspectSigningRoute({...api,buildExecution:async()=>({signer,gasFloor:2000000n,typedData:{domain:{chainId:1,verifyingContract:OWNER}}})}),/INVALID_SMART_ACCOUNT_PLAN/)});
